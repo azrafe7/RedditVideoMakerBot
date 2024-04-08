@@ -13,8 +13,85 @@ from utils.imagenarator import imagemaker
 from utils.playwright import clear_cookie_by_name
 from utils.videos import save_data
 
+import datetime as dt
+import json
+from jinja2 import Environment, FileSystemLoader
+
 __all__ = ["download_screenshots_of_reddit_posts"]
 
+
+def fill_template(template, values):
+    filled_template = template # a copy of template
+    for k, v in values.items():
+        filled_template = filled_template.replace(k, v)
+
+    return filled_template
+
+# Formats `datetime` to something like '1 year ago', '25 minutes ago', etc.
+# `style` can be one of ["none", "old_reddit", "new_reddit"]
+# TODO: check if it works properly (for now it only tries to handle past dates)
+def datetime_to_human_timedelta(datetime, style):
+    if style == "none":
+        return datetime
+
+    now = dt.datetime.now()
+    delta = now - datetime
+    total_seconds = delta.total_seconds()
+    years = total_seconds // (3600 * 24 * 30 * 12)
+    months = total_seconds // (3600 * 24 * 30)
+    days = total_seconds // (3600 * 24)
+    hours = total_seconds // 3600
+    minutes = total_seconds // 60
+    seconds = total_seconds
+
+    human_timedelta = "just now"
+    if style == "old_reddit":
+        suffixes = ["year", "month", "day", "hour", "minute", "second"]
+        separator = " "
+    elif style == "new_reddit":
+        suffixes = ["y", "mo", "d", "h", "m", "s"]
+        separator = ""
+    elapsed = [years, months, days, hours, minutes, seconds]
+    # print(list(zip(suffixes, elapsed)))
+    for idx, t in enumerate(elapsed):
+        if t > 0:
+            human_timedelta = f"{t:.0f}{separator}{suffixes[idx]}"
+            if t > 1 and style != "new_reddit":
+                human_timedelta += "s"
+            human_timedelta += " ago"
+            break
+
+    return human_timedelta
+
+# Formats `number` to something like '12.2k', '1.1M', etc.
+# `style` can be one of ["none", "old_reddit", "new_reddit"]
+def number_to_abbreviated_string(number, style):
+    if style == "none":
+        return number
+
+    abbreviated_str = f"{number:.0f}"
+    millions = number / 1000000
+    thousands = number / 1000
+    if style == "old_reddit":
+        suffixes = ["M", "k"]
+        thresholds = [1, 10]
+    elif style == "new_reddit":
+        suffixes = ["M", "K"]
+        thresholds = [1, 1]
+    counts = [millions, thousands]
+    # print(list(zip(suffixes, counts)))
+    for idx, n in enumerate(counts):
+        frac_part = n - int(n)
+        no_decimals = (n < thresholds[idx] and n > 0.9 * thresholds[idx]) or (n >= thresholds[idx] and (frac_part > 0.9 or frac_part < 0.1))
+        if style == "new_reddit" and no_decimals:
+            abbreviated_str = f"{n:.0f}{suffixes[idx]}"
+            break
+        elif n >= thresholds[idx]:
+            abbreviated_str = f"{n:.1f}{suffixes[idx]}"
+            break
+
+    return abbreviated_str
+    return abbreviated_str
 
 def set_preferred_theme(theme, page):
     # Alternate method to try to set preferred theme
@@ -71,7 +148,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
     print_step("Downloading screenshots of reddit posts...")
     reddit_id = re.sub(r"[^\w\s-]", "", reddit_object["thread_id"])
     # ! Make sure the reddit screenshots folder exists
-    Path(f"assets/temp/{reddit_id}/png").mkdir(parents=True, exist_ok=True)
+    assets_temp_folder = Path(f"assets/temp/")
+    screenshots_temp_folder = assets_temp_folder / Path(f"{reddit_id}/png")
+    screenshots_temp_folder.mkdir(parents=True, exist_ok=True)
 
     # set the theme and disable non-essential cookies
     if settings.config["settings"]["theme"] == "dark":
@@ -107,12 +186,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             transparent=transparent,
         )
 
-    screenshot_num: int
     with sync_playwright() as p:
-        print_substep("Launching Headless Browser...")
+        headless_browser = settings.config["settings"]["headless_browser"]
+        print_substep("Launching " + ("Headless " if headless_browser else "") + "Browser...")
 
         browser = p.chromium.launch(
-            headless=False
+            headless=headless_browser
         )  # headless=False will show the browser for debugging purposes
         # Device scale factor (or dsf for short) allows us to increase the resolution of the screenshots
         # When the dsf is 1, the width of the screenshot is 600 pixels
@@ -135,12 +214,13 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         context.add_cookies(cookies)  # load preference cookies
 
+        page = context.new_page()
+
+        screenshot_debug = settings.config["settings"]["screenshot_debug"]
+
         # Login to Reddit
         print_substep("Logging in to Reddit...")
-        page = context.new_page()
-        
-        screenshot_debug = True
-        
+
         # Use old.reddit.com to login only (go to reddit.com for actual posts/comments later)
         page.goto("https://old.reddit.com/login", timeout=0)
         # page.set_viewport_size(ViewportSize(width=1920, height=1080))
@@ -155,7 +235,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         username_loc.fill(settings.config["reddit"]["creds"]["username"])
         password_loc.fill(settings.config["reddit"]["creds"]["password"])
         button_loc.first.click()
-        
+
         # Check for login error message
         login_error_loc = page.locator("#login-form .c-form-control-feedback-error").first
         if login_error_loc.is_visible():
@@ -191,7 +271,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         # Bypass "See this post in..."
         bypass_see_this_post_in(page)
-        
+
         if page.locator(
             "#t3_12hmbug > div > div._3xX726aBn29LDbsDtzr_6E._1Ap4F5maDtT1E1YuCiaO0r.D3IL3FD0RFy_mkKLPwL4 > div > div > button"
         ).is_visible():
@@ -203,7 +283,6 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             ).click()
             page.wait_for_load_state()  # Wait for page to fully load
 
-            # translate code
         if page.locator(
             "#SHORTCUT_FOCUSABLE_DIV > div:nth-child(7) > div > div > div > header > div > div._1m0iFpls1wkPZJVo38-LSh > button > i"
         ).is_visible():
@@ -212,6 +291,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             ).click()  # Interest popup is showing, this code will close it
 
         if lang:
+            # translate code
             print_substep("Translating post...")
             texts_in_tl = translators.translate_text(
                 reddit_object["thread_title"],
@@ -269,92 +349,150 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 path=f"assets/temp/{reddit_id}/png/story_content.png"
             )
         else:
+            use_template = settings.config["settings"]["use_template"]
+            if use_template:
+                template_url = str(Path("comment_templates", settings.config["settings"]["template_url"]))
+                # Read the Jinja template from a file
+                print(f"Using Comment Template : {template_url}")
+                template_abbreviated_style = settings.config["settings"]["template_abbreviated_style"]
+                if not (template_abbreviated_style in ["none", "old_reddit", "new_reddit"]):
+                    template_abbreviated_style = "none"
+                print(f"Template Abbr. Style   : {template_abbreviated_style}")
+
+                # Create a Jinja environment with UTF-8 encoding
+                env = Environment(loader=FileSystemLoader(template_url))
+                # Load the template
+                template = env.get_template('index.html')
+            
+            accepted_comments = reddit_object["comments"][:screenshot_num]
             for idx, comment in enumerate(
-                reddit_object["comments"][:screenshot_num]
-                # track(
-                    # reddit_object["comments"][:screenshot_num],
-                    # "Downloading screenshots...",
-                # )
+                accepted_comments if screenshot_debug else track(accepted_comments, "Downloading screenshots...")
             ):
                 # Stop if we have reached the screenshot_num
                 if idx >= screenshot_num:
                     break
 
-                if page.locator('[data-testid="content-gate"]').is_visible():
-                    page.locator('[data-testid="content-gate"] button').click()
+                comment_path: Path = screenshots_temp_folder / Path(f"comment_{idx}.png")
+                    
+                comment_obj = comment["obj"]
 
-                page.goto(f'https://reddit.com{comment["comment_url"]}', timeout=0)
-                
-                # Try to set preferred theme from settings
-                set_preferred_theme(settings.config["settings"]["theme"], page)
+                if comment_path.exists():
+                    print(f"Comment Screenshot already downloaded : {comment_path}")
+                else:
+                    if screenshot_debug:
+                        comment_excerpt = get_comment_excerpt(comment)
+                        print(f"[{idx + 1}/{screenshot_num} {comment['comment_id']}]: {comment_excerpt}")
 
-                if screenshot_debug:
-                    comment_excerpt = get_comment_excerpt(comment)
-                    print(f"[{idx + 1}/{screenshot_num} {comment['comment_id']}]: {comment_excerpt}")
+                    if use_template:
 
-                # translate code
+                        # translate code
+                        if settings.config["reddit"]["thread"]["post_lang"]:
+                            comment_tl = translators.translate_text(
+                                comment["comment_body"],
+                                translator="google",
+                                to_language=settings.config["reddit"]["thread"]["post_lang"],
+                            )
+                            comment_obj.body_html = comment_tl
+                        
+                        # Fill template fields and update page
+                        values = {
+                            'author': comment_obj.author.name if comment_obj.author else '[unknown]',
+                            'id': comment_obj.id,
+                            'score': number_to_abbreviated_string(comment_obj.score, style=template_abbreviated_style),
+                            'avatar': comment_obj.author.icon_img if comment_obj.author else '[unknown]',
+                            'date': datetime_to_human_timedelta(dt.datetime.fromtimestamp(comment_obj.created), style=template_abbreviated_style),
+                            'body_text': comment_obj.body,
+                            'body_html': comment_obj.body_html,
+                        }
+                        # Render the template with variables
+                        output = template.render(values)
 
-                if settings.config["reddit"]["thread"]["post_lang"]:
-                    comment_tl = translators.translate_text(
-                        comment["comment_body"],
-                        translator="google",
-                        to_language=settings.config["reddit"]["thread"]["post_lang"],
-                    )
-                    page.evaluate(
-                        '([tl_content, tl_id]) => document.querySelector(`#t1_${tl_id} > div:nth-child(2) > div > div[data-testid="comment"] > div`).textContent = tl_content',
-                        [comment_tl, comment["comment_id"]],
-                    )
-                try:
-                    comment_selector = f'shreddit-comment[thingid="t1_{comment["comment_id"]}"]'
-                    comment_loc = page.locator(comment_selector)
-                    if settings.config["settings"]["zoom"] != 1:
-                        # store zoom settings
-                        zoom = settings.config["settings"]["zoom"]
-                        # zoom the body of the page
-                        page.evaluate("document.body.style.zoom=" + str(zoom))
-                        # scroll comment into view
-                        comment_loc.scroll_into_view_if_needed()
-                        # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
-                        comment_loc.bounding_box()
-                        for i in location:
-                            location[i] = float("{:.2f}".format(location[i] * zoom))
-                        page.screenshot(
-                            clip=comment_loc,
-                            path=f"assets/temp/{reddit_id}/png/comment_{idx}.png",
-                        )
+                        # Save the rendered output to a file
+                        if settings.config["settings"]["template_debug"]:
+                            template_output_file = f"{screenshots_temp_folder}/comment_{idx}.html"
+                            print(f"Jinja Comment Output : '{template_output_file}'")
+                            # print(output)
+                            with open(template_output_file, "w", encoding="utf-8") as output_file:
+                                output_file.write(output)
+
+                        # Option 1: Pass HTML content
+                        page.set_content(output)
+
+                        page.locator('#comment-container').screenshot(path=str(comment_path.resolve()))
+
                     else:
-                        # Bypass "See this post in..."
-                        bypass_see_this_post_in(page)
 
-                        # Click on "View more comments", if present
-                        view_more_comments_button = page.locator('.overflow-actions-dialog ~ button').first
-                        if view_more_comments_button.is_visible():
-                            print("View more comments... [CLICK]")
-                            view_more_comments_button.dispatch_event('click')
-                            view_more_comments_button.wait_for(state='hidden')
+                        if page.locator('[data-testid="content-gate"]').is_visible():
+                            page.locator('[data-testid="content-gate"] button').click()
 
-                        # If the comment text itself is collapsed, expand it
-                        comment_text_loc = comment_loc.locator("p").first
-                        if not comment_text_loc.is_visible():
-                            self_expand_button_loc = comment_loc.locator('summary button').first
-                            if self_expand_button_loc.is_visible():
-                                self_expand_button_loc.dispatch_event('click')
+                        page.goto(f'https://reddit.com{comment["comment_url"]}', timeout=0)
 
-                        # If replies are expanded toggle them
-                        expanded_loc = comment_loc.locator('button[aria-expanded="true"]').first
-                        if expanded_loc.is_visible():
-                            #print("If replies are expanded toggle them")
-                            expanded_loc.dispatch_event("click")
+                        # Try to set preferred theme from settings
+                        set_preferred_theme(settings.config["settings"]["theme"], page)
 
-                        # breakpoint()
-                        comment_loc.first.screenshot(
-                            path=f"assets/temp/{reddit_id}/png/comment_{idx}.png"
-                        )
-                except TimeoutError:
-                    del reddit_object["comments"]
-                    screenshot_num += 1
-                    print("TimeoutError: Skipping screenshot...")
-                    continue
+                        # translate code
+                        if settings.config["reddit"]["thread"]["post_lang"]:
+                            comment_tl = translators.translate_text(
+                                comment["comment_body"],
+                                translator="google",
+                                to_language=settings.config["reddit"]["thread"]["post_lang"],
+                            )
+                            page.evaluate(
+                                '([tl_content, tl_id]) => document.querySelector(`#t1_${tl_id} > div:nth-child(2) > div > div[data-testid="comment"] > div`).textContent = tl_content',
+                                [comment_tl, comment["comment_id"]],
+                            )
+                            
+                        try:
+                            comment_selector = f'shreddit-comment[thingid="t1_{comment["comment_id"]}"]'
+                            comment_loc = page.locator(comment_selector)
+                            if settings.config["settings"]["zoom"] != 1:
+                                # store zoom settings
+                                zoom = settings.config["settings"]["zoom"]
+                                # zoom the body of the page
+                                page.evaluate("document.body.style.zoom=" + str(zoom))
+                                # scroll comment into view
+                                comment_loc.scroll_into_view_if_needed()
+                                # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
+                                comment_loc.bounding_box()
+                                for i in location:
+                                    location[i] = float("{:.2f}".format(location[i] * zoom))
+                                page.screenshot(
+                                    clip=comment_loc,
+                                    path=f"assets/temp/{reddit_id}/png/comment_{idx}.png",
+                                )
+                            else:
+                                # Bypass "See this post in..."
+                                bypass_see_this_post_in(page)
+
+                                # Click on "View more comments", if present
+                                view_more_comments_button = page.locator('.overflow-actions-dialog ~ button').first
+                                if view_more_comments_button.is_visible():
+                                    print("View more comments... [CLICK]")
+                                    view_more_comments_button.dispatch_event('click')
+                                    view_more_comments_button.wait_for(state='hidden')
+
+                                # If the comment text itself is collapsed, expand it
+                                comment_text_loc = comment_loc.locator("p").first
+                                if not comment_text_loc.is_visible():
+                                    self_expand_button_loc = comment_loc.locator('summary button').first
+                                    if self_expand_button_loc.is_visible():
+                                        self_expand_button_loc.dispatch_event('click')
+
+                                # If replies are expanded toggle them
+                                expanded_loc = comment_loc.locator('button[aria-expanded="true"]').first
+                                if expanded_loc.is_visible():
+                                    #print("If replies are expanded toggle them")
+                                    expanded_loc.dispatch_event("click")
+
+                                # breakpoint()
+                                comment_loc.first.screenshot(
+                                    path=f"assets/temp/{reddit_id}/png/comment_{idx}.png"
+                                )
+                        except TimeoutError:
+                            del reddit_object["comments"]
+                            screenshot_num += 1
+                            print("TimeoutError: Skipping screenshot...")
+                            continue
 
         # close browser instance when we are done using it
         browser.close()

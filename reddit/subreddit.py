@@ -153,6 +153,7 @@ def get_subreddit_threads(POST_ID: str):
                                     "comment_body": top_level_comment.body,
                                     "comment_url": top_level_comment.permalink,
                                     "comment_id": top_level_comment.id,
+                                    "obj": top_level_comment,
                                 }
                             )
 
