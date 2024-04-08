@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-import translators
 from moviepy.audio.AudioClip import AudioClip
 from moviepy.audio.fx.volumex import volumex
 from moviepy.editor import AudioFileClip
@@ -13,6 +12,11 @@ from rich.progress import track
 from utils import settings
 from utils.console import print_step, print_substep
 from utils.voice import sanitize_text
+
+print(f"Importing translators...", flush=True)
+import translators
+# _ = translators.preaccelerate_and_speedtest()
+translators.get_region_of_server()
 
 DEFAULT_MAX_LENGTH: int = (
     50  # Video length variable, edit this on your own risk. It should work, but it's not supported

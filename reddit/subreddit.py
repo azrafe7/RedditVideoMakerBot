@@ -18,7 +18,7 @@ def get_subreddit_threads(POST_ID: str):
     Returns a list of threads from the AskReddit subreddit.
     """
 
-    print_substep("Logging into Reddit.")
+    print_substep("[PRAW] Logging into Reddit.")
 
     content = {}
     if settings.config["reddit"]["creds"]["2fa"]:

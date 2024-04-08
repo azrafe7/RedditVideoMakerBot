@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 from typing import Dict, Final
 
-import translators
 from playwright.sync_api import ViewportSize, sync_playwright
 from rich.progress import track
 
@@ -11,7 +10,9 @@ from utils import settings
 from utils.console import print_step, print_substep
 from utils.imagenarator import imagemaker
 from utils.playwright import clear_cookie_by_name
-from utils.videos import save_data
+from utils.videos import save_data  
+
+import translators
 
 import datetime as dt
 import json
@@ -219,7 +220,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         screenshot_debug = settings.config["settings"]["screenshot_debug"]
 
         # Login to Reddit
-        print_substep("Logging in to Reddit...")
+        print_substep("[BROWSER] Logging into Reddit...")
 
         # Use old.reddit.com to login only (go to reddit.com for actual posts/comments later)
         page.goto("https://old.reddit.com/login", timeout=0)
@@ -300,7 +301,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             )
 
             page.evaluate(
-                "tl_content => document.querySelector('[data-adclicklocation=\"title\"] > div > div > h1').textContent = tl_content",
+                "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
                 texts_in_tl,
             )
         else:
@@ -387,10 +388,10 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
                         # translate code
                         if settings.config["reddit"]["thread"]["post_lang"]:
-                            comment_tl = translators.translate_text(
-                                comment["comment_body"],
+                            comment_tl = translators.translate_html(
+                                comment_obj.body_html,
+                                to_language=lang,
                                 translator="google",
-                                to_language=settings.config["reddit"]["thread"]["post_lang"],
                             )
                             comment_obj.body_html = comment_tl
                         
@@ -434,8 +435,8 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         if settings.config["reddit"]["thread"]["post_lang"]:
                             comment_tl = translators.translate_text(
                                 comment["comment_body"],
+                                to_language=lang,
                                 translator="google",
-                                to_language=settings.config["reddit"]["thread"]["post_lang"],
                             )
                             page.evaluate(
                                 '([tl_content, tl_id]) => document.querySelector(`#t1_${tl_id} > div:nth-child(2) > div > div[data-testid="comment"] > div`).textContent = tl_content',
