@@ -68,7 +68,7 @@ def run_many(times) -> None:
             f'on the {x}{("th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th")[x % 10]} iteration of {times}'
         )  # correct 1st 2nd 3rd 4th 5th....
         main()
-        Popen("cls" if name == "nt" else "clear", shell=True).wait()
+        # Popen("cls" if name == "nt" else "clear", shell=True).wait()
 
 
 def shutdown() -> NoReturn:
