@@ -22,7 +22,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 8  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 2  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -111,14 +111,14 @@ class TTSEngine:
                     if must_break:
                         break
 
+                    progress.console.print(f"#{idx + 1} Saving comment...")
+                    progress.advance(task)
+                
                     if len(comment["comment_body"]) > self.tts_module.max_chars:  # Split the comment if it is too long
                         self.split_post(comment["comment_body"], idx)  # Split the comment
                     else:  # If the comment is not too long, just call the tts engine
                         self.call_tts(f"{idx}", process_text(comment["comment_body"]))
 
-                    progress.console.print(f"#{idx + 1} Saving comment...")
-                    progress.advance(task)
-                
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, idx
 
@@ -164,6 +164,7 @@ class TTSEngine:
             print("OSError")
 
     def call_tts(self, filename: str, text: str):
+        print_substep(f"  [bold white][TTS][reset] {text}")
         self.tts_module.run(
             text,
             filepath=f"{self.path}/{filename}.mp3",

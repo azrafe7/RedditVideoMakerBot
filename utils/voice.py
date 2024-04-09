@@ -84,8 +84,13 @@ def sanitize_text(text: str) -> str:
     result = re.sub(regex_urls, " ", text)
 
     # note: not removing apostrophes
-    regex_expr = r"\s['|’]|['|’]\s|[\^_~@!&;#:\-%—“”‘\"%\*/{}\[\]\(\)\\|<>=+]"
+    regex_expr = r"\s['|’]|['|’]\s|[\^_~@!&;#:\-—“”‘\"\*/{}\[\]\(\)\\|<>=+]"
     result = re.sub(regex_expr, " ", result)
+    
+    # replace %
+    # regex_percent = r"%"
+    # result = re.sub(regex_percent, " ", result)
+    
     result = result.replace("+", "plus").replace("&", "and")
 
     # emoji removal if the setting is enabled
