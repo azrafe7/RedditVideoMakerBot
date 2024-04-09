@@ -7,10 +7,10 @@ import numpy as np
 from moviepy.audio.AudioClip import AudioClip
 from moviepy.audio.fx.volumex import volumex
 from moviepy.editor import AudioFileClip
-from rich.progress import track
+from rich.progress import (track, Progress)
 
 from utils import settings
-from utils.console import print_step, print_substep
+from utils.console import print_step, print_substep, console
 from utils.voice import sanitize_text
 
 print(f"Importing translators...", flush=True)
@@ -19,9 +19,10 @@ import translators
 translators.get_region_of_server()
 
 DEFAULT_MAX_LENGTH: int = (
-    70  # Video length variable, edit this on your own risk. It should work, but it's not supported
+    70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
+MAX_COMMENTS = 8  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -72,9 +73,11 @@ class TTSEngine:
 
     def run(self) -> Tuple[int, int]:
         Path(self.path).mkdir(parents=True, exist_ok=True)
-        print_step("Saving Text to MP3 files...")
+        lang = settings.config["reddit"]["thread"]["post_lang"]
+        print_step(("Translating and " if lang else "") + "Saving Text to MP3 files...")
 
         self.add_periods()
+        print_substep(f"Saving title...")
         self.call_tts("title", process_text(self.reddit_object["thread_title"]))
         # processed_text = ##self.reddit_object["thread_post"] != ""
         idx = 0
@@ -90,19 +93,29 @@ class TTSEngine:
                     self.call_tts(f"postaudio-{idx}", process_text(text))
 
         else:
-            for idx, comment in track(enumerate(self.reddit_object["comments"]), "Saving..."):
-                # ! Stop creating mp3 files if the length is greater than max length.
-                if self.length > self.max_length and idx > 1:
-                    self.length -= self.last_clip_length
-                    idx -= 1
-                    break
-                if (
-                    len(comment["comment_body"]) > self.tts_module.max_chars
-                ):  # Split the comment if it is too long
-                    self.split_post(comment["comment_body"], idx)  # Split the comment
-                else:  # If the comment is not too long, just call the tts engine
-                    self.call_tts(f"{idx}", process_text(comment["comment_body"]))
+            with Progress(console=console) as progress:
+                task = progress.add_task("", total=None)
+                for idx, comment in enumerate(self.reddit_object["comments"]):
+                    # ! Stop creating mp3 files if the length is greater than max length, or idx >= MAX_COMMENTS.
+                    must_break = False
+                    if MAX_COMMENTS is None:
+                        if self.length > self.max_length and idx > 1:
+                            self.length -= self.last_clip_length
+                            must_break = True
+                    elif idx >= MAX_COMMENTS:
+                        must_break = True
+                        
+                    if must_break:
+                        break
 
+                    if len(comment["comment_body"]) > self.tts_module.max_chars:  # Split the comment if it is too long
+                        self.split_post(comment["comment_body"], idx)  # Split the comment
+                    else:  # If the comment is not too long, just call the tts engine
+                        self.call_tts(f"{idx}", process_text(comment["comment_body"]))
+
+                    progress.console.print(f"#{idx + 1} Saving comment...")
+                    progress.advance(task)
+                
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, idx
 
@@ -180,7 +193,6 @@ def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
     new_text = sanitize_text(text) if clean else text
     if lang:
-        print_substep("Translating Text...")
         translated_text = translators.translate_text(text, translator="google", to_language=lang)
         new_text = sanitize_text(translated_text)
     return new_text

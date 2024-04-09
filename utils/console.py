@@ -30,9 +30,9 @@ def print_table(items) -> None:
     console.print(Columns([Panel(f"[yellow]{item}", expand=True) for item in items]))
 
 
-def print_substep(text, style="") -> None:
+def print_substep(text, style="", **kwargs) -> None:
     """Prints a rich colored info message without the panelling."""
-    console.print(text, style=style)
+    console.print(text, style=style, **kwargs)
 
 
 def handle_input(
