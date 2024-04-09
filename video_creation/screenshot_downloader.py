@@ -264,11 +264,13 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             exit()
 
         # Goto thread url
-        page.goto(reddit_object["thread_url"], timeout=0)
+        thread_url = reddit_object["thread_url"]
+        print_substep(f"Going to '{thread_url}'...")
+        page.goto(thread_url, timeout=0)
         page.set_viewport_size(ViewportSize(width=W, height=H))
         page.set_viewport_size(ViewportSize(width=1200, height=720))
         page.wait_for_load_state()
-        page.wait_for_timeout(5000)
+        # page.wait_for_timeout(5000)
 
         # Try to set preferred theme from settings
         set_preferred_theme(settings.config["settings"]["theme"], page)
@@ -402,7 +404,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             if screenshot_debug:
                                 comment_excerpt = get_comment_excerpt(comment_obj)
                                 print(f"[Translated to '{lang}'] {comment_excerpt}")
-                            if idx == 0: breakpoint()
+                            # if idx == 0: breakpoint()
 
                         # Fill template fields and update page
                         values = {
@@ -440,6 +442,8 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         # Try to set preferred theme from settings
                         set_preferred_theme(settings.config["settings"]["theme"], page)
 
+                        comment_selector = f'shreddit-comment[thingid="t1_{comment["comment_id"]}"]'
+
                         # translate code
                         if lang:
                             comment_tl = translators.translate_text(
@@ -449,12 +453,10 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             )
                             print(f"[Translated to '{lang}'] {get_excerpt(comment_tl)}")
                             page.evaluate(
-                                '([tl_content, tl_id]) => document.querySelector(`#t1_${tl_id} > div:nth-child(2) > div > div[data-testid="comment"] > div`).textContent = tl_content',
-                                [comment_tl, comment["comment_id"]],
+                                '([comment_tl, comment_selector]) => document.querySelector(`${comment_selector} p`).parentElement.innerHTML = `<p>${comment_tl}</p>`', 
+                                [comment_tl, comment_selector]
                             )
-
                         try:
-                            comment_selector = f'shreddit-comment[thingid="t1_{comment["comment_id"]}"]'
                             comment_loc = page.locator(comment_selector)
                             if settings.config["settings"]["zoom"] != 1:
                                 # store zoom settings
