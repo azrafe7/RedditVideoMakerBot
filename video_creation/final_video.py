@@ -81,6 +81,9 @@ def name_normalize(name: str) -> str:
     else:
         return name
 
+def print_ffmpeg_cmd(cmd):
+    # print_substep(f"[bold white]FFMPEG>[reset] ffmpeg " + " ".join(cmd.get_args()))
+    print_substep(f"[bold white]FFMPEG>[reset] " + " ".join(cmd.compile()))
 
 def prepare_background(reddit_id: str, W: int, H: int) -> str:
     output_path = f"assets/temp/{reddit_id}/background_noaudio.mp4"
@@ -100,6 +103,7 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
         .overwrite_output()
     )
     try:
+        print_ffmpeg_cmd(output)
         output.run(quiet=True)
     except ffmpeg.Error as e:
         print(e.stderr.decode("utf8"))
@@ -190,9 +194,11 @@ def make_final_video(
             float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")["format"]["duration"]),
         )
     audio_concat = ffmpeg.concat(*audio_clips, a=1, v=0)
-    ffmpeg.output(
+    cmd = ffmpeg.output(
         audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k"}
-    ).overwrite_output().run(quiet=True)
+    ).overwrite_output()
+    print_ffmpeg_cmd(cmd)
+    cmd.run(quiet=True)
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
@@ -343,7 +349,7 @@ def make_final_video(
             path[:251] + ".mp4"
         )  # Prevent a error by limiting the path length, do not change this.
         try:
-            ffmpeg.output(
+            cmd = ffmpeg.output(
                 background_clip,
                 final_audio,
                 path,
@@ -354,7 +360,9 @@ def make_final_video(
                     "b:a": "192k",
                     "threads": multiprocessing.cpu_count(),
                 },
-            ).overwrite_output().global_args("-progress", progress.output_file.name).run(
+            ).overwrite_output().global_args("-progress", progress.output_file.name)
+            print_ffmpeg_cmd(cmd)
+            cmd.run(
                 quiet=True,
                 overwrite_output=True,
                 capture_stdout=False,
@@ -373,7 +381,7 @@ def make_final_video(
         print_step("Rendering the Only TTS Video 🎥")
         with ProgressFfmpeg(length, on_update_example) as progress:
             try:
-                ffmpeg.output(
+                cmd = ffmpeg.output(
                     background_clip,
                     audio,
                     path,
@@ -384,7 +392,9 @@ def make_final_video(
                         "b:a": "192k",
                         "threads": multiprocessing.cpu_count(),
                     },
-                ).overwrite_output().global_args("-progress", progress.output_file.name).run(
+                ).overwrite_output().global_args("-progress", progress.output_file.name)
+                print_ffmpeg_cmd(cmd)
+                cmd.run(
                     quiet=True,
                     overwrite_output=True,
                     capture_stdout=False,
