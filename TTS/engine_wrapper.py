@@ -76,6 +76,9 @@ class TTSEngine:
         lang = settings.config["reddit"]["thread"]["post_lang"]
         print_step(("Translating and " if lang else "") + "Saving Text to MP3 files...")
 
+        print_substep(f"DEFAULT_MAX_LENGTH: {DEFAULT_MAX_LENGTH} seconds   MAX_COMMENTS: {MAX_COMMENTS}")
+        print_substep("Using [bold dark_orange]" + ("DEFAULT_MAX_LENGTH" if MAX_COMMENTS is None else "MAX_COMMENTS"))
+
         self.add_periods()
         print_substep(f"Saving title...")
         self.call_tts("title", process_text(self.reddit_object["thread_title"]))
