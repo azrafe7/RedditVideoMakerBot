@@ -430,6 +430,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         # Option 1: Pass HTML content
                         page.set_content(output)
 
+                        if settings.config["settings"]["zoom"] != 1:
+                            # store zoom settings
+                            zoom = settings.config["settings"]["zoom"]
+                            # zoom the body of the page
+                            page.evaluate("document.body.style.zoom=" + str(zoom))
+
                         page.locator('#comment-container').screenshot(path=str(comment_path.resolve()))
 
                     else:
