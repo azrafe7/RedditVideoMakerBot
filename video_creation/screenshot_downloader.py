@@ -304,7 +304,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 to_language=lang,
                 translator="google",
             )
-            print(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
+            print_substep(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
 
             page.evaluate(
                 "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
@@ -388,7 +388,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 else:
                     if screenshot_debug:
                         comment_excerpt = get_comment_excerpt(comment_obj)
-                        print(f"[{idx + 1}/{len(accepted_comments)} {comment_obj.id}] {comment_obj.author}: {comment_excerpt}")
+                        print_substep(f"[{idx + 1}/{len(accepted_comments)} {comment_obj.id}] {comment_obj.author}: {comment_excerpt}")
 
                     if use_template:
                         # translate code
@@ -403,7 +403,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             comment_obj.body = comment_tl
                             if screenshot_debug:
                                 comment_excerpt = get_comment_excerpt(comment_obj)
-                                print(f"[Translated to '{lang}'] {comment_excerpt}")
+                                print_substep(f"[Translated to '{lang}'] {comment_excerpt}")
                             # if idx == 0: breakpoint()
 
                         # Fill template fields and update page
@@ -457,7 +457,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                                 to_language=lang,
                                 translator="google",
                             )
-                            print(f"[Translated to '{lang}'] {get_excerpt(comment_tl)}")
+                            print_substep(f"[Translated to '{lang}'] {get_excerpt(comment_tl)}")
                             page.evaluate(
                                 '([comment_tl, comment_selector]) => document.querySelector(`${comment_selector} p`).parentElement.innerHTML = `<p>${comment_tl}</p>`', 
                                 [comment_tl, comment_selector]
