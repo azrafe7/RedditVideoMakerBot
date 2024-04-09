@@ -10,7 +10,7 @@ from utils import settings
 from utils.console import print_step, print_substep
 from utils.imagenarator import imagemaker
 from utils.playwright import clear_cookie_by_name
-from utils.videos import save_data  
+from utils.videos import save_data
 
 import translators
 
@@ -127,11 +127,14 @@ def bypass_see_this_post_in(page):
         if backdrop_loc.count() > 0:
             backdrop_loc.evaluate('node => node.style.display="none"')
 
-def get_comment_excerpt(comment):
-    comment_excerpt = (comment["comment_body"].split("\n")[0])
-    if len(comment_excerpt) > 80: comment_excerpt = comment_excerpt[:80] + "…"
+def get_excerpt(text, max_length=80):
+  excerpt = text.split("\n")[0]
+  if len(excerpt) > max_length: excerpt = excerpt[:max_length] + "…"
 
-    return comment_excerpt
+  return excerpt
+
+def get_comment_excerpt(comment):
+    return get_excerpt(comment.body)
 
 def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
     """Downloads screenshots of reddit posts as seen on the web. Downloads to assets/temp/png
@@ -299,6 +302,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 to_language=lang,
                 translator="google",
             )
+            print(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
 
             page.evaluate(
                 "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
@@ -364,7 +368,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 env = Environment(loader=FileSystemLoader(template_url))
                 # Load the template
                 template = env.get_template('index.html')
-            
+
             accepted_comments = reddit_object["comments"][:screenshot_num]
             for idx, comment in enumerate(
                 accepted_comments if screenshot_debug else track(accepted_comments, "Downloading screenshots...")
@@ -374,27 +378,32 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     break
 
                 comment_path: Path = screenshots_temp_folder / Path(f"comment_{idx}.png")
-                    
+
                 comment_obj = comment["obj"]
 
                 if comment_path.exists():
                     print(f"Comment Screenshot already downloaded : {comment_path}")
                 else:
                     if screenshot_debug:
-                        comment_excerpt = get_comment_excerpt(comment)
-                        print(f"[{idx + 1}/{screenshot_num} {comment['comment_id']}]: {comment_excerpt}")
+                        comment_excerpt = get_comment_excerpt(comment_obj)
+                        print(f"[{idx + 1}/{len(accepted_comments)} {comment_obj.id}] {comment_obj.author}: {comment_excerpt}")
 
                     if use_template:
-
                         # translate code
-                        if settings.config["reddit"]["thread"]["post_lang"]:
-                            comment_tl = translators.translate_html(
-                                comment_obj.body_html,
+                        if lang:
+                            comment_tl = translators.translate_text(
+                                comment_obj.body,
                                 to_language=lang,
                                 translator="google",
                             )
-                            comment_obj.body_html = comment_tl
-                        
+                            # update comment_obj with translation
+                            comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
+                            comment_obj.body = comment_tl
+                            if screenshot_debug:
+                                comment_excerpt = get_comment_excerpt(comment_obj)
+                                print(f"[Translated to '{lang}'] {comment_excerpt}")
+                            if idx == 0: breakpoint()
+
                         # Fill template fields and update page
                         values = {
                             'author': comment_obj.author.name if comment_obj.author else '[unknown]',
@@ -432,17 +441,18 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         set_preferred_theme(settings.config["settings"]["theme"], page)
 
                         # translate code
-                        if settings.config["reddit"]["thread"]["post_lang"]:
+                        if lang:
                             comment_tl = translators.translate_text(
                                 comment["comment_body"],
                                 to_language=lang,
                                 translator="google",
                             )
+                            print(f"[Translated to '{lang}'] {get_excerpt(comment_tl)}")
                             page.evaluate(
                                 '([tl_content, tl_id]) => document.querySelector(`#t1_${tl_id} > div:nth-child(2) > div > div[data-testid="comment"] > div`).textContent = tl_content',
                                 [comment_tl, comment["comment_id"]],
                             )
-                            
+
                         try:
                             comment_selector = f'shreddit-comment[thingid="t1_{comment["comment_id"]}"]'
                             comment_loc = page.locator(comment_selector)

@@ -104,11 +104,10 @@ if __name__ == "__main__":
         sys.exit()
     try:
         if config["reddit"]["thread"]["post_id"]:
-            for index, post_id in enumerate(config["reddit"]["thread"]["post_id"].split("+")):
+            posts = config["reddit"]["thread"]["post_id"].split("+")
+            for index, post_id in enumerate(posts):
                 index += 1
-                print_step(
-                    f'on the {index}{("st" if index % 10 == 1 else ("nd" if index % 10 == 2 else ("rd" if index % 10 == 3 else "th")))} post of {len(config["reddit"]["thread"]["post_id"].split("+"))}'
-                )
+                print_step(f'Processing Reddit post {index}/{len(posts)}...')
                 main(post_id)
                 # Popen("cls" if name == "nt" else "clear", shell=True).wait()
         elif config["settings"]["times_to_run"]:

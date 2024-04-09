@@ -19,7 +19,7 @@ import translators
 translators.get_region_of_server()
 
 DEFAULT_MAX_LENGTH: int = (
-    50  # Video length variable, edit this on your own risk. It should work, but it's not supported
+    70  # Video length variable, edit this on your own risk. It should work, but it's not supported
 )
 
 
