@@ -326,10 +326,10 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 # zoom the body of the page
                 page.evaluate("document.body.style.zoom=" + str(zoom))
                 # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
-                post_loc = post_loc.bounding_box()
-                for i in post_loc:
-                    post_loc[i] = float("{:.2f}".format(post_loc[i] * zoom))
-                page.screenshot(clip=post_loc, path=postcontentpath)
+                bbox = post_loc.bounding_box()
+                for i in bbox:
+                    bbox[i] = float("{:.2f}".format(bbox[i] * zoom))
+                page.screenshot(clip=bbox, path=postcontentpath)
             else:
                 post_loc.first.screenshot(path=postcontentpath)
         except Exception as e:
@@ -430,13 +430,20 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         # Option 1: Pass HTML content
                         page.set_content(output)
 
+                        # breakpoint()
+                        comment_loc = page.locator('#comment-container')
                         if settings.config["settings"]["zoom"] != 1:
                             # store zoom settings
                             zoom = settings.config["settings"]["zoom"]
                             # zoom the body of the page
                             page.evaluate("document.body.style.zoom=" + str(zoom))
-
-                        page.locator('#comment-container').screenshot(path=str(comment_path.resolve()))
+                            # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
+                            bbox = comment_loc.bounding_box()
+                            for i in bbox:
+                                bbox[i] = float("{:.2f}".format(bbox[i] * zoom))
+                            page.screenshot(clip=bbox, path=str(comment_path.resolve()))
+                        else:
+                            comment_loc.screenshot(path=str(comment_path.resolve()))
 
                     else:
 
@@ -462,8 +469,33 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                                 '([comment_tl, comment_selector]) => document.querySelector(`${comment_selector} p`).parentElement.innerHTML = `<p>${comment_tl}</p>`', 
                                 [comment_tl, comment_selector]
                             )
+                        
                         try:
                             comment_loc = page.locator(comment_selector)
+                            # Bypass "See this post in..."
+                            bypass_see_this_post_in(page)
+
+                            # Click on "View more comments", if present
+                            view_more_comments_button = page.locator('.overflow-actions-dialog ~ button').first
+                            if view_more_comments_button.is_visible():
+                                print("View more comments... [CLICK]")
+                                view_more_comments_button.dispatch_event('click')
+                                view_more_comments_button.wait_for(state='hidden')
+
+                            # If the comment text itself is collapsed, expand it
+                            comment_text_loc = comment_loc.locator("p").first
+                            if not comment_text_loc.is_visible():
+                                self_expand_button_loc = comment_loc.locator('summary button').first
+                                if self_expand_button_loc.is_visible():
+                                    self_expand_button_loc.dispatch_event('click')
+
+                            # If replies are expanded toggle them
+                            expanded_loc = comment_loc.locator('button[aria-expanded="true"]').first
+                            if expanded_loc.is_visible():
+                                #print("If replies are expanded toggle them")
+                                expanded_loc.dispatch_event("click")
+
+                            # breakpoint()
                             if settings.config["settings"]["zoom"] != 1:
                                 # store zoom settings
                                 zoom = settings.config["settings"]["zoom"]
@@ -472,41 +504,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                                 # scroll comment into view
                                 comment_loc.scroll_into_view_if_needed()
                                 # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
-                                comment_loc.bounding_box()
-                                for i in location:
-                                    location[i] = float("{:.2f}".format(location[i] * zoom))
-                                page.screenshot(
-                                    clip=comment_loc,
-                                    path=f"assets/temp/{reddit_id}/png/comment_{idx}.png",
-                                )
+                                bbox = comment_loc.bounding_box()
+                                for i in bbox:
+                                    bbox[i] = float("{:.2f}".format(bbox[i] * zoom))
+                                page.screenshot(clip=bbox, path=f"assets/temp/{reddit_id}/png/comment_{idx}.png")
                             else:
-                                # Bypass "See this post in..."
-                                bypass_see_this_post_in(page)
-
-                                # Click on "View more comments", if present
-                                view_more_comments_button = page.locator('.overflow-actions-dialog ~ button').first
-                                if view_more_comments_button.is_visible():
-                                    print("View more comments... [CLICK]")
-                                    view_more_comments_button.dispatch_event('click')
-                                    view_more_comments_button.wait_for(state='hidden')
-
-                                # If the comment text itself is collapsed, expand it
-                                comment_text_loc = comment_loc.locator("p").first
-                                if not comment_text_loc.is_visible():
-                                    self_expand_button_loc = comment_loc.locator('summary button').first
-                                    if self_expand_button_loc.is_visible():
-                                        self_expand_button_loc.dispatch_event('click')
-
-                                # If replies are expanded toggle them
-                                expanded_loc = comment_loc.locator('button[aria-expanded="true"]').first
-                                if expanded_loc.is_visible():
-                                    #print("If replies are expanded toggle them")
-                                    expanded_loc.dispatch_event("click")
-
-                                # breakpoint()
-                                comment_loc.first.screenshot(
-                                    path=f"assets/temp/{reddit_id}/png/comment_{idx}.png"
-                                )
+                                comment_loc.first.screenshot(path=f"assets/temp/{reddit_id}/png/comment_{idx}.png")
                         except TimeoutError:
                             del reddit_object["comments"]
                             screenshot_num += 1
