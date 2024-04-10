@@ -13,7 +13,7 @@ from utils.videos import check_done
 from utils.voice import sanitize_text
 
 
-def get_subreddit_threads(POST_ID: str):
+def get_subreddit_threads(POST_ID: str, from_cli=False):
     """
     Returns a list of threads from the AskReddit subreddit.
     """
@@ -63,7 +63,7 @@ def get_subreddit_threads(POST_ID: str):
             print_substep("Subreddit not defined. Using AskReddit.")
     else:
         sub = settings.config["reddit"]["thread"]["subreddit"]
-        print_substep(f"Using subreddit: r/{sub} from TOML config")
+        print_substep(f"Using subreddit: r/{sub} " + ("from Command Line" if from_cli else "from TOML config"))
         subreddit_choice = sub
         if str(subreddit_choice).casefold().startswith("r/"):  # removes the r/ from the input
             subreddit_choice = subreddit_choice[2:]

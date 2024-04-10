@@ -25,7 +25,7 @@ def check_done(
         if video["id"] == str(redditobj):
             if settings.config["reddit"]["thread"]["post_id"]:
                 print_step(
-                    "You already have done this video but since it was declared specifically in the config file the program will continue"
+                    "You've already done this video but since it was declared specifically the program will continue"
                 )
                 return redditobj
             print_step("Getting new post as the current one has already been done")

@@ -45,9 +45,9 @@ print_markdown(
 # checkversion(__VERSION__)
 
 
-def main(POST_ID=None) -> None:
+def main(POST_ID=None, from_cli=False) -> None:
     global redditid, reddit_object
-    reddit_object = get_subreddit_threads(POST_ID)
+    reddit_object = get_subreddit_threads(POST_ID, from_cli=from_cli)
     redditid = id(reddit_object)
     length, number_of_comments = save_text_to_mp3(reddit_object)
     length = math.ceil(length)
@@ -66,7 +66,7 @@ def main(POST_ID=None) -> None:
 def run_many(times) -> None:
     for x in range(1, times + 1):
         print_step(
-            f'on the {x}{("th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th")[x % 10]} iteration of {times}'
+            f'On the {x}{("th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th")[x % 10]} iteration of {times}'
         )  # correct 1st 2nd 3rd 4th 5th....
         main()
         # Popen("cls" if name == "nt" else "clear", shell=True).wait()
@@ -104,12 +104,18 @@ if __name__ == "__main__":
         )
         sys.exit()
     try:
+        from_cli = False
+        if len(sys.argv) > 1:
+            from_cli = True
+            post_id = sys.argv[1]
+            print_substep(f"Setting post_id to '{post_id}' (passed from Command Line)")
+            config["reddit"]["thread"]["post_id"] = post_id
         if config["reddit"]["thread"]["post_id"]:
             posts = config["reddit"]["thread"]["post_id"].split("+")
             for index, post_id in enumerate(posts):
                 index += 1
                 print_step(f'Processing Reddit post {index}/{len(posts)}...')
-                main(post_id)
+                main(post_id, from_cli=from_cli)
                 # Popen("cls" if name == "nt" else "clear", shell=True).wait()
         elif config["settings"]["times_to_run"]:
             run_many(config["settings"]["times_to_run"])
