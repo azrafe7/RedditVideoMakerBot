@@ -7,6 +7,7 @@ import time
 from os.path import exists  # Needs to be imported specifically
 from typing import Final
 from typing import Tuple, Dict
+from pathlib import Path
 
 import ffmpeg
 import translators
@@ -202,7 +203,7 @@ def make_final_video(
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
-    screenshot_width = int((W * 45) // 100)
+    screenshot_width = int((W * 50) // 100)
     print(f"screenshot_width: {screenshot_width}")
     audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
     final_audio = merge_background_audio(audio, reddit_id)
@@ -412,4 +413,5 @@ def make_final_video(
     print_step("Removing temporary files 🗑")
     cleanups = cleanup(reddit_id)
     print_substep(f"Removed {cleanups} temporary files 🗑")
-    print_step("Done! 🎉 The video is in the results folder 📁")
+    relative_output_file = Path(path).absolute().relative_to(Path('.').absolute())
+    print_step(f'Done! � Video output to:\n"{relative_output_file}"', justify='center', style='bold green')

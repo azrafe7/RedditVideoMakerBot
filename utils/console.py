@@ -17,10 +17,10 @@ def print_markdown(text) -> None:
     console.print(md)
 
 
-def print_step(text) -> None:
+def print_step(text, justify="left", style="", **kwargs) -> None:
     """Prints a rich info message."""
 
-    panel = Panel(Text(text, justify="left"))
+    panel = Panel(Text(text, justify=justify, style=style, **kwargs))
     console.print(panel)
 
 
