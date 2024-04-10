@@ -13,6 +13,7 @@ import translators
 from PIL import Image
 from rich.console import Console
 from rich.progress import track
+from rich.markup import escape
 
 from utils import settings
 from utils.cleanup import cleanup
@@ -82,8 +83,7 @@ def name_normalize(name: str) -> str:
         return name
 
 def print_ffmpeg_cmd(cmd):
-    # print_substep(f"[bold white]FFMPEG>[reset] ffmpeg " + " ".join(cmd.get_args()))
-    print_substep(f"[bold white]FFMPEG>[reset] " + " ".join(cmd.compile()))
+    print_substep(f"[bold white]FFMPEG>[/] [reset]" + escape(" ".join(cmd.compile())))
 
 def prepare_background(reddit_id: str, W: int, H: int) -> str:
     output_path = f"assets/temp/{reddit_id}/background_noaudio.mp4"
@@ -203,6 +203,7 @@ def make_final_video(
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
     screenshot_width = int((W * 45) // 100)
+    print(f"screenshot_width: {screenshot_width}")
     audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
     final_audio = merge_background_audio(audio, reddit_id)
 
