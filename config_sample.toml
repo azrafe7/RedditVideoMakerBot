@@ -1,0 +1,61 @@
+[ai]
+ai_similarity_enabled = false
+ai_similarity_keywords = ""
+
+[settings]
+allow_nsfw = false
+theme = "dark"
+times_to_run = 1
+opacity = 0.9
+storymode = false
+storymodemethod = 1
+storymode_max_length = 1000
+resolution_w = 1080
+resolution_h = 1920
+zoom = 1.0
+headless_browser = false
+template_url = "dark_reddit_mockup"
+template_abbreviated_style = "new_reddit"
+use_template = true
+template_debug = true
+screenshot_debug = true
+
+[settings.background]
+background_video = "minecraft"
+background_audio = "lofi"
+background_audio_volume = 0.5
+enable_extra_audio = false
+background_thumbnail = false
+background_thumbnail_font_family = "arial"
+background_thumbnail_font_size = 96
+background_thumbnail_font_color = "255,255,255"
+
+[settings.tts]
+voice_choice = "pyttsx"
+random_voice = false
+elevenlabs_voice_name = "Bella"
+elevenlabs_api_key = ""
+aws_polly_voice = "Matthew"
+streamlabs_polly_voice = "Matthew"
+tiktok_voice = "en_us_001"
+tiktok_sessionid = ""
+python_voice = "0"
+py_voice_num = "2"
+silence_duration = 0.3
+no_emojis = false
+
+[reddit.creds]
+client_id = "REDACTED"
+client_secret = "REDACTED"
+username = "REDACTED"
+password = "REDACTED"
+2fa = false
+
+[reddit.thread]
+random = false
+subreddit = "AskReddit+Redditdev"
+post_id = "1byfe1i"
+max_comment_length = 500
+min_comment_length = 1
+post_lang = "it"
+min_comments = 15
