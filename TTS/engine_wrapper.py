@@ -198,6 +198,7 @@ def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
     new_text = sanitize_text(text) if clean else text
     if lang:
-        translated_text = translators.translate_text(text, translator=settings.config["settings"]["translator"], to_language=lang)
-        new_text = sanitize_text(translated_text)
+        translated_text = translators.translate_text(new_text, translator=settings.config["settings"]["translator"], to_language=lang)
+        new_text = sanitize_text(translated_text) if clean else translated_text
+    print(f"processed_text: {new_text}")
     return new_text
