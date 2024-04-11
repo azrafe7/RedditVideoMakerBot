@@ -7,6 +7,7 @@ from playwright.sync_api import ViewportSize, sync_playwright
 from rich.progress import track
 
 from utils import settings
+from utils import translate_wrapper
 from utils.console import print_step, print_substep
 from utils.imagenarator import imagemaker
 from utils.playwright import clear_cookie_by_name
@@ -17,6 +18,7 @@ import translators
 import datetime as dt
 import json
 from jinja2 import Environment, FileSystemLoader
+from jinja2.filters import do_striptags as striptags
 
 __all__ = ["download_screenshots_of_reddit_posts"]
 
@@ -393,16 +395,16 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     if use_template:
                         # translate code
                         if lang:
-                            breakpoint()
-                            html_fmt = "<!DOCTYPE html><html><head><title></title><body><translation>{}</translation></body></html>"
+                            # breakpoint()
+                            # html_fmt = "<!DOCTYPE html><html><head><title></title><body><translation>{}</translation></body></html>"
+                            html_fmt = "<translation>{}</translation>"
                             html = html_fmt.format(comment_obj.body_html)
-                            html_tl = translators.translate_html(html, to_language=lang, translator="bing")
+                            html_tl = translate_wrapper.translate_html(html, to_language=lang, translator="bing")
                             body_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
-                            comment_tl = comment["comment_body"]  # already modified and translated in engine_wrapper
                             # update comment_obj with translation
                             # comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
-                            comment_obj.body = comment_tl
                             comment_obj.body_html = body_html_tl
+                            comment_obj.body = striptags(body_html_tl)
                             if screenshot_debug:
                                 comment_excerpt = get_comment_excerpt(comment_obj)
                                 print_substep(f"[Translated to '{lang}'] {comment_excerpt}")
