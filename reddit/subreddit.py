@@ -117,6 +117,7 @@ def get_subreddit_threads(POST_ID: str, from_cli=False):
             style="bold blue",
         )
 
+    content["submission_obj"] = submission
     content["thread_url"] = threadurl
     content["thread_title"] = submission.title
     content["thread_id"] = submission.id
