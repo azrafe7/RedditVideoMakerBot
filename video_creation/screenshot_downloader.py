@@ -129,6 +129,12 @@ def bypass_see_this_post_in(page):
         if backdrop_loc.count() > 0:
             backdrop_loc.evaluate('node => node.style.display="none"')
 
+def hide_header(page):
+    # Hide header
+    header_loc = page.locator('reddit-header-small')
+    if header_loc.count() > 0:
+        header_loc.evaluate('node => node.style.display="none"')
+
 def get_excerpt(text, max_length=80):
   excerpt = text.split("\n")[0]
   if len(excerpt) > max_length: excerpt = excerpt[:max_length] + "…"
@@ -229,8 +235,8 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         # Use old.reddit.com to login only (go to reddit.com for actual posts/comments later)
         page.goto("https://old.reddit.com/login", timeout=0)
-        page.set_viewport_size(ViewportSize(width=1920, height=1080))
-        # page.set_viewport_size(ViewportSize(width=1200, height=720))
+        # page.set_viewport_size(ViewportSize(width=1920, height=1080))
+        page.set_viewport_size(ViewportSize(width=1200, height=720))
         login_url = page.url
 
         username_loc = page.locator("#login-form #user_login").first
@@ -268,9 +274,10 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         # Goto thread url
         thread_url = reddit_object["thread_url"]
         print_substep(f"Going to '{thread_url}'...")
-        page.goto(thread_url, timeout=0)
         page.set_viewport_size(ViewportSize(width=W, height=H))
-        page.set_viewport_size(ViewportSize(width=1200, height=720))
+        # page.set_viewport_size(ViewportSize(width=1200, height=720))
+        page.goto(thread_url, timeout=0)
+
         page.wait_for_load_state()
         # page.wait_for_timeout(5000)
 
@@ -279,6 +286,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         # Bypass "See this post in..."
         bypass_see_this_post_in(page)
+
+        # Hide header
+        hide_header(page)
 
         if page.locator(
             "#t3_12hmbug > div > div._3xX726aBn29LDbsDtzr_6E._1Ap4F5maDtT1E1YuCiaO0r.D3IL3FD0RFy_mkKLPwL4 > div > div > button"
@@ -298,20 +308,33 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 "#SHORTCUT_FOCUSABLE_DIV > div:nth-child(7) > div > div > div > header > div > div._1m0iFpls1wkPZJVo38-LSh > button > i"
             ).click()  # Interest popup is showing, this code will close it
 
+        submission_obj = reddit_object["submission_obj"]
         if lang:
             # translate code
             print_substep("Translating post...")
+            
+            # title
             texts_in_tl = translators.translate_text(
                 reddit_object["thread_title"],
                 to_language=lang,
                 translator=settings.config["settings"]["translator"],
             )
-            print_substep(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
-
             page.evaluate(
                 "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
                 texts_in_tl,
             )
+            print_substep(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
+            
+            # selftext
+            html_fmt = "<translation>{}</translation>"
+            html = html_fmt.format(submission_obj.selftext_html)
+            html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
+            selftext_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
+            page.evaluate(
+                "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
+                selftext_html_tl,
+            )
+
         else:
             print_substep("Skipping translation...")
 
@@ -322,6 +345,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             # Bypass "See this post in..."
             bypass_see_this_post_in(page)
 
+            breakpoint()
             if settings.config["settings"]["zoom"] != 1:
                 # store zoom settings
                 zoom = settings.config["settings"]["zoom"]
@@ -373,6 +397,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 # Load the template
                 template = env.get_template('index.html')
 
+            breakpoint()
             accepted_comments = reddit_object["comments"][:screenshot_num]
             for idx, comment in enumerate(
                 accepted_comments if screenshot_debug else track(accepted_comments, "Downloading screenshots...")
@@ -399,7 +424,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             # html_fmt = "<!DOCTYPE html><html><head><title></title><body><translation>{}</translation></body></html>"
                             html_fmt = "<translation>{}</translation>"
                             html = html_fmt.format(comment_obj.body_html)
-                            html_tl = translate_wrapper.translate_html(html, to_language=lang, translator="bing")
+                            html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
                             body_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
                             # update comment_obj with translation
                             # comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
