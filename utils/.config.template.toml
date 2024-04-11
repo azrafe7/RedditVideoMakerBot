@@ -33,6 +33,7 @@ resolution_h = { optional = false, default = 1920, example = 2560, explantation 
 zoom = { optional = true, default = 1, example = 1.1, explanation = "Sets the browser zoom level. Useful if you want the text larger.", type = "float", nmin = 0.1, nmax = 2, oob_error = "The text is really difficult to read at a zoom level higher than 2" }
 
 headless_browser = { optional = false, type = "bool", default = false, example = false, options = [true, false, ], explanation = "If True launches the browser in headless mode" }
+translator = { optional = true, default = "bing", example = "google", explanation = "Sets the translator to use" }
 template_url = { optional = true, default = "light_reddit_mockup", example = "light_reddit_mockup", options = ["old_reddit_mockup", "light_reddit_mockup", "dark_reddit_mockup", "example", ], explanation = "Sets the comment template to use" }
 template_abbreviated_style = { optional = true, default = "new_reddit", example = "new_reddit", options = ["none", "old_reddit", "new_reddit",], explanation = "Sets the template abbreviated style" }
 use_template = { optional = true, type = "bool", default = false, example = false, options = [true, false, ], explanation = "If True loads template_url as a comment template, and fills it with data using the Reddit API (using PRAW)" }

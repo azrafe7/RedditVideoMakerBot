@@ -74,7 +74,8 @@ class TTSEngine:
     def run(self) -> Tuple[int, int]:
         Path(self.path).mkdir(parents=True, exist_ok=True)
         lang = settings.config["reddit"]["thread"]["post_lang"]
-        print_step(("Translating and " if lang else "") + "Saving Text to MP3 files...")
+        translator = settings.config["settings"]["translator"]
+        print_step((f"Translating (with '{translator}') and " if lang else "") + "Saving Text to MP3 files...")
 
         print_substep(f"DEFAULT_MAX_LENGTH: {DEFAULT_MAX_LENGTH} seconds   MAX_COMMENTS: {MAX_COMMENTS}")
         print_substep("Using [bold dark_orange]" + ("DEFAULT_MAX_LENGTH" if MAX_COMMENTS is None else "MAX_COMMENTS"))
@@ -82,8 +83,6 @@ class TTSEngine:
         self.add_periods()
         print_substep(f"Saving title...")
         self.call_tts("title", process_text(self.reddit_object["thread_title"]))
-        # processed_text = ##self.reddit_object["thread_post"] != ""
-        idx = 0
 
         if settings.config["settings"]["storymode"]:
             if settings.config["settings"]["storymodemethod"] == 0:
@@ -96,6 +95,7 @@ class TTSEngine:
                     self.call_tts(f"postaudio-{idx}", process_text(text))
 
         else:
+            processed_comments = 0
             with Progress(console=console) as progress:
                 task = progress.add_task("", total=None)
                 for idx, comment in enumerate(self.reddit_object["comments"]):
@@ -113,6 +113,7 @@ class TTSEngine:
 
                     progress.console.print(f"#{idx + 1} Saving comment...")
                     progress.advance(task)
+                    processed_comments += 1
                 
                     if len(comment["comment_body"]) > self.tts_module.max_chars:  # Split the comment if it is too long
                         self.split_post(comment["comment_body"], idx)  # Split the comment
@@ -120,7 +121,7 @@ class TTSEngine:
                         self.call_tts(f"{idx}", process_text(comment["comment_body"]))
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
-        return self.length, idx
+        return self.length, processed_comments
 
     def split_post(self, text: str, idx):
         split_files = []
@@ -197,6 +198,6 @@ def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
     new_text = sanitize_text(text) if clean else text
     if lang:
-        translated_text = translators.translate_text(text, translator="google", to_language=lang)
+        translated_text = translators.translate_text(text, translator=settings.config["settings"]["translator"], to_language=lang)
         new_text = sanitize_text(translated_text)
     return new_text

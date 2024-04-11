@@ -302,7 +302,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             texts_in_tl = translators.translate_text(
                 reddit_object["thread_title"],
                 to_language=lang,
-                translator="google",
+                translator=settings.config["settings"]["translator"],
             )
             print_substep(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
 
@@ -393,21 +393,22 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     if use_template:
                         # translate code
                         if lang:
-                            comment_tl = translators.translate_text(
-                                comment_obj.body,
-                                to_language=lang,
-                                translator="google",
-                            )
+                            breakpoint()
+                            html_fmt = "<!DOCTYPE html><html><head><title></title><body><translation>{}</translation></body></html>"
+                            html = html_fmt.format(comment_obj.body_html)
+                            html_tl = translators.translate_html(html, to_language=lang, translator="bing")
+                            body_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
+                            comment_tl = comment["comment_body"]  # already modified and translated in engine_wrapper
                             # update comment_obj with translation
-                            comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
+                            # comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
                             comment_obj.body = comment_tl
+                            comment_obj.body_html = body_html_tl
                             if screenshot_debug:
                                 comment_excerpt = get_comment_excerpt(comment_obj)
                                 print_substep(f"[Translated to '{lang}'] {comment_excerpt}")
                             # if idx == 0: breakpoint()
 
                         # Fill template fields and update page
-                        breakpoint()
                         values = {
                             'author': comment_obj.author.name if comment_obj.author else '[unknown]',
                             'id': comment_obj.id,
@@ -464,7 +465,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             comment_tl = translators.translate_text(
                                 comment["comment_body"],
                                 to_language=lang,
-                                translator="google",
+                                translator=settings.config["settings"]["translator"],
                             )
                             print_substep(f"[Translated to '{lang}'] {get_excerpt(comment_tl)}")
                             page.evaluate(
