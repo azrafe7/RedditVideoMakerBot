@@ -22,7 +22,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 1  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 8  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -199,6 +199,8 @@ def process_text(text: str, clean: bool = True):
     new_text = sanitize_text(text) if clean else text
     if lang:
         translated_text = translators.translate_text(new_text, translator=settings.config["settings"]["translator"], to_language=lang)
-        new_text = sanitize_text(translated_text) if clean else translated_text
-    print(f"processed_text: {new_text}")
+        # print(f"translated_text: {translated_text}")
+        # new_text = sanitize_text(translated_text) if clean else translated_text
+        new_text = translated_text
+    # print(f"processed_text: {new_text}")
     return new_text
