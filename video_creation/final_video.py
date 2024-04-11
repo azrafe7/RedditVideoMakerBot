@@ -414,4 +414,5 @@ def make_final_video(
     cleanups = cleanup(reddit_id)
     print_substep(f"Removed {cleanups} temporary files 🗑")
     relative_output_file = Path(path).absolute().relative_to(Path('.').absolute())
-    print_step(f'Done! � Video output to:\n"{relative_output_file}"', justify='center', style='bold green')
+    print_step(f'Done! �', style='bold green')
+    print_substep(f'[bold white]Video output to:[/] "{relative_output_file}"')

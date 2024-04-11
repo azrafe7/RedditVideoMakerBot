@@ -345,7 +345,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             # Bypass "See this post in..."
             bypass_see_this_post_in(page)
 
-            breakpoint()
+            # breakpoint()
             if settings.config["settings"]["zoom"] != 1:
                 # store zoom settings
                 zoom = settings.config["settings"]["zoom"]
@@ -397,7 +397,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 # Load the template
                 template = env.get_template('index.html')
 
-            breakpoint()
+            # breakpoint()
             accepted_comments = reddit_object["comments"][:screenshot_num]
             for idx, comment in enumerate(
                 accepted_comments if screenshot_debug else track(accepted_comments, "Downloading screenshots...")
