@@ -227,8 +227,8 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         # Use old.reddit.com to login only (go to reddit.com for actual posts/comments later)
         page.goto("https://old.reddit.com/login", timeout=0)
-        # page.set_viewport_size(ViewportSize(width=1920, height=1080))
-        page.set_viewport_size(ViewportSize(width=1200, height=720))
+        page.set_viewport_size(ViewportSize(width=1920, height=1080))
+        # page.set_viewport_size(ViewportSize(width=1200, height=720))
         login_url = page.url
 
         username_loc = page.locator("#login-form #user_login").first
@@ -407,6 +407,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             # if idx == 0: breakpoint()
 
                         # Fill template fields and update page
+                        breakpoint()
                         values = {
                             'author': comment_obj.author.name if comment_obj.author else '[unknown]',
                             'id': comment_obj.id,
@@ -415,6 +416,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             'date': datetime_to_human_timedelta(dt.datetime.fromtimestamp(comment_obj.created), style=template_abbreviated_style),
                             'body_text': comment_obj.body,
                             'body_html': comment_obj.body_html,
+                            'permalink': comment_obj.permalink,
                         }
                         # Render the template with variables
                         output = template.render(values)

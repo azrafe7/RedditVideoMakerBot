@@ -55,6 +55,10 @@
         font-size: 14px;
       }
       
+      .no-decorations {
+        text-decoration: none;
+      }
+      
       comment {
         grid-row-start: 2;
         grid-column-start: 2;
@@ -155,9 +159,11 @@
           <span class="grid-label">header</span>
           <span class="user">{{author}}</span>
           <span class="time time-separator">•</span>
-          <span class="time">
-            <span class="time time-abbr">{{date}}</span>
-          </span>
+          <a href="{{permalink}}" class="no-decorations">
+            <span class="time">
+              <span class="time time-abbr">{{date}}</span>
+            </span>
+          </a>
         </header>
         <thread-line class="inherit-background"><span class="grid-label">line</span>
           <div class="line"></div>
