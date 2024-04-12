@@ -205,7 +205,7 @@ def make_final_video(
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
     screenshot_width = int((W * 50) // 100)
-    print(f"screenshot_width: {screenshot_width}")
+    print_substep(f"screenshot_width: {screenshot_width}")
     audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
     final_audio = merge_background_audio(audio, reddit_id)
 
@@ -346,25 +346,26 @@ def make_final_video(
         pbar.update(status - old_percentage)
 
     defaultPath = f"results/{subreddit}"
+    path = defaultPath + f"/{filename}"
+    path = (
+        path[:251] + ".mp4"
+    )  # Prevent a error by limiting the path length, do not change this.
+    cmd = ffmpeg.output(
+        background_clip,
+        final_audio,
+        path,
+        f="mp4",
+        **{
+            "c:v": "h264",
+            # "b:v": "20M",
+            "b:a": "192k",
+            "threads": NUM_CPUS,
+        },
+    ).overwrite_output()
+    print_ffmpeg_cmd(cmd)
     with ProgressFfmpeg(length, on_update_example) as progress:
-        path = defaultPath + f"/{filename}"
-        path = (
-            path[:251] + ".mp4"
-        )  # Prevent a error by limiting the path length, do not change this.
         try:
-            cmd = ffmpeg.output(
-                background_clip,
-                final_audio,
-                path,
-                f="mp4",
-                **{
-                    "c:v": "h264",
-                    # "b:v": "20M",
-                    "b:a": "192k",
-                    "threads": NUM_CPUS,
-                },
-            ).overwrite_output().global_args("-progress", progress.output_file.name)
-            print_ffmpeg_cmd(cmd)
+            cmd.global_args("-progress", progress.output_file.name)
             cmd.run(
                 quiet=True,
                 overwrite_output=True,
