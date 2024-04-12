@@ -442,6 +442,13 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         print_substep(f"[{idx + 1}/{len(accepted_comments)} {comment_obj.id}] {comment_obj.author}: {comment_excerpt}")
 
                     if use_template:
+                        # replace preview links with images
+                        preview_regex = re.compile('<a href=("https://preview[^>]+)>(.*?)</a>')
+                        if preview_regex.search(comment_obj.body_html):
+                            # breakpoint()
+                            pass
+                        comment_obj.body_html = preview_regex.sub(r'<img src=\1 style="max-width:180px">', comment_obj.body_html)
+                        
                         # translate code
                         if lang:
                             # breakpoint()
@@ -482,7 +489,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                                 output_file.write(output)
 
                         # Option 1: Pass HTML content
-                        page.set_content(output)
+                        page.set_content(output, wait_until="load")
 
                         # breakpoint()
                         comment_loc = page.locator('#comment-container')
