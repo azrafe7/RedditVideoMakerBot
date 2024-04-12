@@ -24,6 +24,7 @@ from utils.videos import save_data
 
 console = Console()
 
+NUM_CPUS = multiprocessing.cpu_count()  # multiprocessing.cpu_count() 
 
 class ProgressFfmpeg(threading.Thread):
     def __init__(self, vid_duration_seconds, progress_update_callback):
@@ -98,7 +99,7 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
                 "c:v": "h264",
                 "b:v": "20M",
                 "b:a": "192k",
-                "threads": multiprocessing.cpu_count(),
+                "threads": NUM_CPUS,
             },
         )
         .overwrite_output()
@@ -360,7 +361,7 @@ def make_final_video(
                     "c:v": "h264",
                     "b:v": "20M",
                     "b:a": "192k",
-                    "threads": multiprocessing.cpu_count(),
+                    "threads": NUM_CPUS,
                 },
             ).overwrite_output().global_args("-progress", progress.output_file.name)
             print_ffmpeg_cmd(cmd)
@@ -392,7 +393,7 @@ def make_final_video(
                         "c:v": "h264",
                         "b:v": "20M",
                         "b:a": "192k",
-                        "threads": multiprocessing.cpu_count(),
+                        "threads": NUM_CPUS,
                     },
                 ).overwrite_output().global_args("-progress", progress.output_file.name)
                 print_ffmpeg_cmd(cmd)
