@@ -22,7 +22,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 1  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 10  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -67,15 +67,16 @@ class TTSEngine:
             if comment["comment_body"][-1] != ".":
                 comment["comment_body"] += "."
             comment["comment_body"] = comment["comment_body"].replace(". . .", ".")
-            comment["comment_body"] = comment["comment_body"].replace(".. . ", ".")
-            comment["comment_body"] = comment["comment_body"].replace(". . ", ".")
+            comment["comment_body"] = comment["comment_body"].replace(".. .", ".")
+            comment["comment_body"] = comment["comment_body"].replace(". .", ".")
             comment["comment_body"] = re.sub(r'\."\.', '".', comment["comment_body"])
 
     def run(self) -> Tuple[int, int]:
         Path(self.path).mkdir(parents=True, exist_ok=True)
         lang = settings.config["reddit"]["thread"]["post_lang"]
         translator = settings.config["settings"]["translator"]
-        print_step((f"Translating (with '{translator}') and " if lang else "") + "Saving Text to MP3 files...")
+        tts_engine = settings.config["settings"]["tts"]["voice_choice"]
+        print_step((f"Translating (with '{translator}') and " if lang else "") + f"Saving Text to MP3 files (with '{tts_engine}')...")
 
         print_substep(f"DEFAULT_MAX_LENGTH: {DEFAULT_MAX_LENGTH} seconds   MAX_COMMENTS: {MAX_COMMENTS}")
         print_substep("Using [bold dark_orange]" + ("DEFAULT_MAX_LENGTH" if MAX_COMMENTS is None else "MAX_COMMENTS"))
@@ -198,6 +199,7 @@ def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
     new_text = sanitize_text(text) if clean else text
     if lang:
+        # print(f"new_text: {new_text}")
         translated_text = translators.translate_text(new_text, translator=settings.config["settings"]["translator"], to_language=lang)
         # print(f"translated_text: {translated_text}")
         # new_text = sanitize_text(translated_text) if clean else translated_text
