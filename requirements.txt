@@ -72,7 +72,7 @@ pydantic==1.10.14
 pyee==9.0.4
 PyExecJS==1.5.1
 Pygments==2.17.2
-pypiwin32==223
+pypiwin32==223;sys_platform == 'win32'
 python-dateutil==2.9.0.post0
 pyttsx3==2.90
 pywin32==306;sys_platform == 'win32'
