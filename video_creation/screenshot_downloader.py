@@ -275,7 +275,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         thread_url = reddit_object["thread_url"]
         print_substep(f"Going to '{thread_url}'...")
         page.set_viewport_size(ViewportSize(width=W, height=H))
-        # page.set_viewport_size(ViewportSize(width=1200, height=720))
+        page.set_viewport_size(ViewportSize(width=1200, height=720))
         page.goto(thread_url, timeout=0)
 
         page.wait_for_load_state()
@@ -346,6 +346,20 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             bypass_see_this_post_in(page)
 
             # breakpoint()
+            # replace video with preview image
+            image_preview_loc = post_loc.locator('link[as="image"]')
+            player_loc = post_loc.locator('shreddit-player')
+            if image_preview_loc.count() > 0 and player_loc.count() > 0:
+                image_src = image_preview_loc.get_attribute("href")
+                page.evaluate('''(image_src) => { 
+                  player = document.querySelector('shreddit-player');
+                  player.setAttribute("src", image_src);
+                  player.style = "margin:auto; width:auto;";
+                  playerHTML = player.outerHTML;
+                  playerHTML = playerHTML.replace("shreddit-player", "img");
+                  player.outerHTML = playerHTML;
+                }''', image_src)
+
             if settings.config["settings"]["zoom"] != 1:
                 # store zoom settings
                 zoom = settings.config["settings"]["zoom"]
@@ -358,6 +372,16 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 page.screenshot(clip=bbox, path=postcontentpath)
             else:
                 post_loc.first.screenshot(path=postcontentpath)
+
+            # Save the post html to a file
+            if settings.config["settings"]["template_debug"]:
+                output = post_loc.evaluate('node => node.outerHTML')
+                template_output_file = f"{screenshots_temp_folder}/title.html"
+                print(f"Title Output : '{template_output_file}'")
+                # print(output)
+                with open(template_output_file, "w", encoding="utf-8") as output_file:
+                    output_file.write(output)
+                    
         except Exception as e:
             print_substep("Something went wrong!", style="red")
             resp = input(
