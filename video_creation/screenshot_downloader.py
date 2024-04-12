@@ -326,14 +326,15 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             print_substep(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
             
             # selftext
-            html_fmt = "<translation>{}</translation>"
-            html = html_fmt.format(submission_obj.selftext_html)
-            html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
-            selftext_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
-            page.evaluate(
-                "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
-                selftext_html_tl,
-            )
+            if submission_obj.selftext_html:
+                html_fmt = "<translation>{}</translation>"
+                html = html_fmt.format(submission_obj.selftext_html)
+                html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
+                selftext_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
+                page.evaluate(
+                    "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
+                    selftext_html_tl,
+                )
 
         else:
             print_substep("Skipping translation...")
