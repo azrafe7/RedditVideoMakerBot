@@ -2,7 +2,6 @@ import json
 from os.path import exists
 
 from utils import settings
-from utils.ai_methods import sort_by_similarity
 from utils.console import print_substep
 
 
@@ -18,6 +17,7 @@ def get_subreddit_undone(submissions: list, subreddit, times_checked=0, similari
     """
     # Second try of getting a valid Submission
     if times_checked and settings.config["ai"]["ai_similarity_enabled"]:
+        from utils.ai_methods import sort_by_similarity
         print("Sorting based on similarity for a different date filter and thread limit..")
         submissions = sort_by_similarity(
             submissions, keywords=settings.config["ai"]["ai_similarity_enabled"]

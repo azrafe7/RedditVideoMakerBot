@@ -5,9 +5,7 @@ from praw.models import MoreComments
 from prawcore.exceptions import ResponseException
 
 from utils import settings
-from utils.ai_methods import sort_by_similarity
 from utils.console import print_step, print_substep
-from utils.posttextparser import posttextparser
 from utils.subreddit import get_subreddit_undone
 from utils.videos import check_done
 from utils.voice import sanitize_text
@@ -78,6 +76,7 @@ def get_subreddit_threads(POST_ID: str, from_cli=False):
     ):
         submission = reddit.submission(id=settings.config["reddit"]["thread"]["post_id"])
     elif settings.config["ai"]["ai_similarity_enabled"]:  # ai sorting based on comparison
+        from utils.ai_methods import sort_by_similarity
         threads = subreddit.hot(limit=50)
         keywords = settings.config["ai"]["ai_similarity_keywords"].split(",")
         keywords = [keyword.strip() for keyword in keywords]
@@ -125,6 +124,7 @@ def get_subreddit_threads(POST_ID: str, from_cli=False):
     content["comments"] = []
     if settings.config["settings"]["storymode"]:
         if settings.config["settings"]["storymodemethod"] == 1:
+            from utils.posttextparser import posttextparser
             content["thread_post"] = posttextparser(submission.selftext)
         else:
             content["thread_post"] = submission.selftext
