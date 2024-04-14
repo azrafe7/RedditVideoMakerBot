@@ -4,7 +4,7 @@ import time as pytime
 from datetime import datetime
 from time import sleep
 
-from cleantext import clean
+from cleantext.clean import clean
 from requests import Response
 
 from utils import settings
