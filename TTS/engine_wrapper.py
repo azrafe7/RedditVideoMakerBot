@@ -85,6 +85,8 @@ class TTSEngine:
         print_substep(f"Saving title...")
         self.call_tts("title", process_text(self.reddit_object["thread_title"]))
 
+        processed_comments = 0
+        
         if settings.config["settings"]["storymode"]:
             if settings.config["settings"]["storymodemethod"] == 0:
                 if len(self.reddit_object["thread_post"]) > self.tts_module.max_chars:
@@ -94,9 +96,9 @@ class TTSEngine:
             elif settings.config["settings"]["storymodemethod"] == 1:
                 for idx, text in track(enumerate(self.reddit_object["thread_post"])):
                     self.call_tts(f"postaudio-{idx}", process_text(text))
+                    processed_comments += 1
 
         else:
-            processed_comments = 0
             with Progress(console=console) as progress:
                 task = progress.add_task("", total=None)
                 for idx, comment in enumerate(self.reddit_object["comments"]):
