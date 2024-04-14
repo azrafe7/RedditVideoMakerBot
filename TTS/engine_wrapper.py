@@ -94,9 +94,13 @@ class TTSEngine:
                 else:
                     self.call_tts("postaudio", process_text(self.reddit_object["thread_post"]))
             elif settings.config["settings"]["storymodemethod"] == 1:
-                for idx, text in track(enumerate(self.reddit_object["thread_post"])):
-                    self.call_tts(f"postaudio-{idx}", process_text(text))
-                    processed_comments += 1
+                with Progress(console=console) as progress:
+                    task = progress.add_task("", total=None)
+                    for idx, text in enumerate(self.reddit_object["thread_post"]):
+                        progress.console.print(f"#{idx + 1} Saving post text...")
+                        progress.advance(task)
+                        processed_comments += 1
+                        self.call_tts(f"postaudio-{idx}", process_text(text))
 
         else:
             with Progress(console=console) as progress:
