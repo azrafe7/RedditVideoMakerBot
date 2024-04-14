@@ -1,6 +1,7 @@
 import random
 
-from elevenlabs import generate, save
+from elevenlabs import save
+from elevenlabs.client import ElevenLabs
 
 from utils import settings
 
@@ -35,7 +36,10 @@ class elevenlabs:
                 "You didn't set an Elevenlabs API key! Please set the config variable ELEVENLABS_API_KEY to a valid API key."
             )
 
-        audio = generate(api_key=api_key, text=text, voice=voice, model="eleven_multilingual_v1")
+        client = ElevenLabs(
+            api_key = api_key,
+        )
+        audio = convert(text=text, voice=voice, model="eleven_multilingual_v1")
         save(audio=audio, filename=filepath)
 
     def randomvoice(self):
