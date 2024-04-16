@@ -92,7 +92,7 @@ def tts(text: str, voice: str, output_filename: str = "output.mp3", play_sound: 
     chunks: list[str] = _split_text(text)
 
     for entry in ENDPOINT_DATA:
-        print(f"""Trying '{entry["url"]}'...""")
+        # print(f"""Trying '{entry["url"]}'...""")
         endpoint_valid: bool = True
 
         # empty list to store the data from the reqeusts
@@ -143,7 +143,7 @@ def tts(text: str, voice: str, output_filename: str = "output.mp3", play_sound: 
         # write the audio data to a file
         with open(output_filename, "wb") as file:
             file.write(audio_bytes)
-            print(f"File '{output_filename}' has been generated successfully.")
+            # print(f"File '{output_filename}' has been generated successfully.")
         
         # play the audio if specified
         if (play_sound) :

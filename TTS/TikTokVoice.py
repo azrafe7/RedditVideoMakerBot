@@ -81,18 +81,11 @@ class TikTokVoice:
     """TikTokVoice Text-to-Speech Wrapper"""
 
     def __init__(self):
-        headers = {
-            "User-Agent": "com.zhiliaoapp.musically/2022600030 (Linux; U; Android 7.1.2; es_ES; SM-G988N; "
-            "Build/NRD90M;tt-ok/3.12.13.1)",
-            "Cookie": f"sessionid={settings.config['settings']['tts']['tiktok_sessionid']}",
-        }
-
-        self.URI_BASE = "https://api16-normal-c-useast1a.tiktokv.com/media/api/text/speech/invoke/"
         self.max_chars = 300
-
-        self._session = requests.Session()
-        # set the headers to the session, so we don't have to do it for every request
-        self._session.headers = headers
+        
+        # merge and patch VOICES
+        all_voices = list(set(disney_voices + eng_voices + non_eng_voices + vocals) | set(tiktokvoice.VOICES))
+        tiktokvoice.VOICES = all_voices
 
     def run(self, text: str, filepath: str, random_voice: bool = False):
         if random_voice:
