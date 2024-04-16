@@ -84,41 +84,24 @@ class TikTokVoice:
         self.max_chars = 300
         
         # merge and patch VOICES
-        all_voices = list(set(disney_voices + eng_voices + non_eng_voices + vocals) | set(tiktokvoice.VOICES))
-        tiktokvoice.VOICES = all_voices
+        self.all_voices = list(set(disney_voices + eng_voices + non_eng_voices + vocals) | set(tiktokvoice.VOICES))
+        # print(f"{self.all_voices}")
+        self.voice = settings.config["settings"]["tts"]["tiktok_voice"]
+        tiktokvoice.VOICES = self.all_voices
 
     def run(self, text: str, filepath: str, random_voice: bool = False):
+        voice = self.voice
         if random_voice:
             voice = self.random_voice()
-        else:
-            # if tiktok_voice is not set in the config file, then use a random voice
-            voice = settings.config["settings"]["tts"].get("tiktok_voice", None)
 
         tiktokvoice.tts(text=text, voice=voice, output_filename=filepath)
 
-    def get_voices(self, text: str, voice: Optional[str] = None) -> dict:
-        """If voice is not passed, the API will try to use the most fitting voice"""
-        # sanitize text
-        text = text.replace("+", "plus").replace("&", "and").replace("r/", "")
-
-        # prepare url request
-        params = {"req_text": text, "speaker_map_type": 0, "aid": 1233}
-
-        if voice is not None:
-            params["text_speaker"] = voice
-
-        # send request
-        try:
-            response = self._session.post(self.URI_BASE, params=params)
-        except ConnectionError:
-            time.sleep(random.randrange(1, 7))
-            response = self._session.post(self.URI_BASE, params=params)
-
-        return response.json()
-
-    @staticmethod
-    def random_voice() -> str:
-        return random.choice(eng_voices)
+    def random_voice(self) -> str:
+        lang = settings.config["reddit"]["thread"]["post_lang"]
+        if not lang:
+            return random.choice(eng_voices)
+        else:
+            return self.voice
 
 
 class TikTokVoiceException(Exception):

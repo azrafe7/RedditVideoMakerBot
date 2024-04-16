@@ -81,12 +81,12 @@ VOICES = [
 def tts(text: str, voice: str, output_filename: str = "output.mp3", play_sound: bool = False) -> None:
     # specified voice is valid
     if not voice in VOICES:
-        raise ValueError("voice must be valid")
+        raise ValueError(f"Invalid voice '{voice}'!")
         pass
     
     # text is not empty
     if not text:
-        raise ValueError("text must not be 'None'")
+        raise ValueError(f"Invalid or empty text '{text}'!")
     
     # split the text into chunks
     chunks: list[str] = _split_text(text)
