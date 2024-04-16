@@ -81,7 +81,7 @@ VOICES = [
 def tts(text: str, voice: str, output_filename: str = "output.mp3", play_sound: bool = False) -> None:
     # specified voice is valid
     if not voice in VOICES:
-        # raise ValueError("voice must be valid")
+        raise ValueError("voice must be valid")
         pass
     
     # text is not empty

@@ -4,6 +4,7 @@ from rich.console import Console
 
 from TTS.GTTS import GTTS
 from TTS.TikTok import TikTok
+from TTS.TikTokVoice import TikTokVoice
 from TTS.aws_polly import AWSPolly
 from TTS.elevenlabs import elevenlabs
 from TTS.engine_wrapper import TTSEngine
@@ -19,6 +20,7 @@ TTSProviders = {
     "AWSPolly": AWSPolly,
     "StreamlabsPolly": StreamlabsPolly,
     "TikTok": TikTok,
+    "TikTokVoice": TikTokVoice,
     "pyttsx": pyttsx,
     "ElevenLabs": elevenlabs,
 }
