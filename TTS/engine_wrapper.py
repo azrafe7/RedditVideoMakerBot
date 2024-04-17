@@ -8,6 +8,9 @@ from moviepy.audio.AudioClip import AudioClip
 from moviepy.audio.fx.volumex import volumex
 from moviepy.editor import AudioFileClip
 from rich.progress import (track, Progress)
+import ffmpeg
+from pathlib import Path
+from video_creation.final_video import print_ffmpeg_cmd
 
 from utils import settings
 from utils.console import print_step, print_substep, console
@@ -22,7 +25,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 1  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 2  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -81,9 +84,11 @@ class TTSEngine:
         print_substep(f"DEFAULT_MAX_LENGTH: {DEFAULT_MAX_LENGTH} seconds   MAX_COMMENTS: {MAX_COMMENTS}")
         print_substep("Using [bold dark_orange]" + ("DEFAULT_MAX_LENGTH" if MAX_COMMENTS is None else "MAX_COMMENTS"))
 
+        self.create_silence_mp3()
+
         self.add_periods()
         print_substep(f"Saving title...")
-        self.call_tts("title", process_text(self.reddit_object["thread_title"]))
+        self.call_tts("title", process_text(self.reddit_object["thread_title"]), add_silence=True)
 
         processed_comments = 0
         
@@ -92,7 +97,7 @@ class TTSEngine:
                 if len(self.reddit_object["thread_post"]) > self.tts_module.max_chars:
                     self.split_post(self.reddit_object["thread_post"], "postaudio")
                 else:
-                    self.call_tts("postaudio", process_text(self.reddit_object["thread_post"]))
+                    self.call_tts("postaudio", process_text(self.reddit_object["thread_post"]), add_silence=True)
             elif settings.config["settings"]["storymodemethod"] == 1:
                 with Progress(console=console) as progress:
                     task = progress.add_task("", total=None)
@@ -100,9 +105,10 @@ class TTSEngine:
                         progress.console.print(f"#{idx + 1} Saving post text...")
                         progress.advance(task)
                         processed_comments += 1
-                        self.call_tts(f"postaudio-{idx}", process_text(text))
+                        self.call_tts(f"postaudio-{idx}", process_text(text), add_silence=True)
 
         else:
+            
             with Progress(console=console) as progress:
                 task = progress.add_task("", total=None)
                 for idx, comment in enumerate(self.reddit_object["comments"]):
@@ -125,7 +131,7 @@ class TTSEngine:
                     if len(comment["comment_body"]) > self.tts_module.max_chars:  # Split the comment if it is too long
                         self.split_post(comment["comment_body"], idx)  # Split the comment
                     else:  # If the comment is not too long, just call the tts engine
-                        self.call_tts(f"{idx}", process_text(comment["comment_body"]))
+                        self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True)
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, processed_comments
@@ -149,7 +155,8 @@ class TTSEngine:
                 print("newtext was blank because sanitized split text resulted in none")
                 continue
             else:
-                self.call_tts(f"{idx}-{idy}.part", newtext)
+                is_last_entry = idy == len(split_text) - 1
+                self.call_tts(f"{idx}-{idy}.part", newtext, add_silence=is_last_entry)
                 with open(f"{self.path}/list.txt", "w") as f:
                     for idz in range(0, len(split_text)):
                         f.write("file " + f"'{idx}-{idz}.part.mp3'" + "\n")
@@ -171,13 +178,29 @@ class TTSEngine:
         except OSError:
             print("OSError")
 
-    def call_tts(self, filename: str, text: str):
+    def call_tts(self, filename: str, text: str, add_silence=False):
         print_substep(f"  [bold white][TTS][reset] {text}")
         self.tts_module.run(
             text,
             filepath=f"{self.path}/{filename}.mp3",
             random_voice=settings.config["settings"]["tts"]["random_voice"],
         )
+        if add_silence:
+            tts_file = f"{self.path}/{filename}.mp3"
+            silence_file = f"{self.path}/silence.mp3"
+            output_file = f"{self.path}/{filename}_s.mp3"
+            try:
+                cmd = ffmpeg.concat(ffmpeg.input(tts_file), ffmpeg.input(silence_file), v=0, a=1).output(output_file, **{"b:a": "192k"}).overwrite_output()
+                cmd.run(
+                    quiet=True,
+                    overwrite_output=True,
+                    capture_stdout=False,
+                    capture_stderr=False,
+                )
+            except ffmpeg.Error as e:
+                print(e.stderr.decode("utf8"))
+                exit(1)
+            Path(output_file).replace(Path(tts_file))  # overwrite tts file with audio with silence
         # try:
         #     self.length += MP3(f"{self.path}/{filename}.mp3").info.length
         # except (MutagenError, HeaderNotFoundError):
