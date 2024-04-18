@@ -108,6 +108,31 @@ class TTSEngine:
                         self.call_tts(f"postaudio-{idx}", process_text(text), add_silence=True)
 
         else:
+            breakpoint()
+            submission_obj = self.reddit_object["submission_obj"]
+            selftext = submission_obj.selftext
+            if selftext:
+                if len(selftext) > self.tts_module.max_chars:  # Split the selftext if it is too long
+                    self.split_post(selftext, "postaudio")  # Split the selftext
+                else:  # If the selftext is not too long, just call the tts engine
+                    self.call_tts(f"postaudio", process_text(selftext), add_silence=True)
+                    
+                # merge with title audio
+                title_file = f"{self.path}/title.mp3"
+                selftext_file = f"{self.path}/postaudio.mp3"
+                output_file = f"{self.path}/postaudio_s.mp3"
+                try:
+                    cmd = ffmpeg.concat(ffmpeg.input(title_file), ffmpeg.input(selftext_file), v=0, a=1).output(output_file, **{"b:a": "192k"}).overwrite_output()
+                    cmd.run(
+                        quiet=True,
+                        overwrite_output=True,
+                        capture_stdout=False,
+                        capture_stderr=False,
+                    )
+                except ffmpeg.Error as e:
+                    print(e.stderr.decode("utf8"))
+                    exit(1)
+                Path(output_file).replace(Path(title_file))  # overwrite title file with file with title + selftext
             
             with Progress(console=console) as progress:
                 task = progress.add_task("", total=None)
