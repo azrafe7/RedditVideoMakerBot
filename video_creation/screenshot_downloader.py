@@ -435,7 +435,8 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
                 comment_obj = comment["obj"]
 
-                if comment_path.exists():
+                skip_if_already_downloaded = False
+                if skip_if_already_downloaded and comment_path.exists():
                     print(f"Comment Screenshot already downloaded : {comment_path}")
                 else:
                     if screenshot_debug:
