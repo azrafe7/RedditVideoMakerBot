@@ -100,7 +100,7 @@ class TikTokVoice:
         if not lang:
             return random.choice(eng_voices)
         else:
-            return self.voice
+            return self.default_voice
 
     def get_default_voice(self):
         return self.default_voice
