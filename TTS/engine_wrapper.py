@@ -8,9 +8,11 @@ from moviepy.audio.AudioClip import AudioClip
 from moviepy.audio.fx.volumex import volumex
 from moviepy.editor import AudioFileClip
 from rich.progress import (track, Progress)
+from rich.markup import escape
 import ffmpeg
 from pathlib import Path
 from video_creation.final_video import print_ffmpeg_cmd
+from cleantext import clean as cleantext
 
 from utils import settings
 from utils.console import print_step, print_substep, console
@@ -154,6 +156,17 @@ class TTSEngine:
         
         return splitted_text
 
+    def split_text2(self, text: str):
+        splitted_text = []
+        threshold = self.tts_module.max_chars
+        for chunk in re.split('\. |\n', text):
+            if splitted_text and len(chunk) + len(splitted_text[-1]) < threshold:
+                splitted_text[-1] += ' ' + chunk + '.'
+            else:
+                splitted_text.append(chunk + '.')
+        
+        return splitted_text
+
     def split_post(self, text: str, filename):
         print(f"SPLIT_POST: self.random_voice: {self.random_voice}")
         split_files = []
@@ -230,14 +243,15 @@ class TTSEngine:
     def call_tts(self, filename: str, text: str, voice=None, add_silence=False):
         texts = [text]
         if len(text) > self.tts_module.max_chars:  # Split the text if it is too long
-            texts = self.split_text(text)
+            # texts = self.split_text(text)
+            texts = self.split_text2(text)
         
         output_file = f"{self.path}/{filename}.mp3"
         
         num_parts = len(texts)
         parts = []
         if num_parts == 1:
-            print_substep(f"  [bold white]\[TTS][reset] {text}")
+            print_substep(f"  [bold white]\[TTS][reset] {escape(text)}")
             filepath = output_file
             parts.append(filepath)
             self.tts_module.run(
@@ -252,7 +266,7 @@ class TTSEngine:
                     print("text was blank because sanitized split text resulted in none")
                     continue
                 
-                print_substep(f"  [bold white]\[splitted TTS][reset] {text}")
+                print_substep(f"  [bold white]\[splitted TTS][reset] {escape(text)}")
                 suffix = f"_part{part}"
                 filepath = f"{self.path}/{filename}{suffix}.mp3"
                 parts.append(filepath)
@@ -299,12 +313,18 @@ class TTSEngine:
 
 def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
-    new_text = sanitize_text(text) if clean else text
+    
+    def clean_text(text):
+        return cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, no_emoji=True)
+    
+    # new_text = sanitize_text(text) if clean else text
+    new_text = clean_text(text) if clean else text
     if lang:
         # print(f"new_text: {new_text}")
         translated_text = translators.translate_text(new_text, translator=settings.config["settings"]["translator"], to_language=lang)
         # print(f"translated_text: {translated_text}")
         # new_text = sanitize_text(translated_text) if clean else translated_text
-        new_text = translated_text
+        new_text = clean_text(translated_text) if clean else translated_text
+        # new_text = translated_text
     # print(f"processed_text: {new_text}")
     return new_text
