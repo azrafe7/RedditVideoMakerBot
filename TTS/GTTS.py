@@ -9,8 +9,9 @@ class GTTS:
     def __init__(self):
         self.max_chars = 5000
         self.voices = []
+        self.default_voice = None
 
-    def run(self, text, filepath, random_voice=False):
+    def run(self, text, filepath, voice=None):
         tts = gTTS(
             text=text,
             lang=settings.config["reddit"]["thread"]["post_lang"] or "en",
@@ -18,5 +19,8 @@ class GTTS:
         )
         tts.save(filepath)
 
-    def randomvoice(self):
+    def get_random_voice(self):
         return random.choice(self.voices)
+
+    def get_default_voice(self):
+        return self.default_voice

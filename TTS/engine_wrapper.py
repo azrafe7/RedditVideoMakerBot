@@ -86,18 +86,18 @@ class TTSEngine:
 
         self.create_silence_mp3()
 
+        self.use_random_voice = settings.config["settings"]["tts"]["random_voice"]
+        
         self.add_periods()
         print_substep(f"Saving title...")
-        self.call_tts("title", process_text(self.reddit_object["thread_title"]), add_silence=True)
+        voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
+        self.call_tts("title", process_text(self.reddit_object["thread_title"]), add_silence=True, voice=voice)
 
         processed_comments = 0
         
         if settings.config["settings"]["storymode"]:
             if settings.config["settings"]["storymodemethod"] == 0:
-                if len(self.reddit_object["thread_post"]) > self.tts_module.max_chars:
-                    self.split_post(self.reddit_object["thread_post"], "postaudio")
-                else:
-                    self.call_tts("postaudio", process_text(self.reddit_object["thread_post"]), add_silence=True)
+                self.call_tts("postaudio", process_text(self.reddit_object["thread_post"]), add_silence=True, voice=voice)
             elif settings.config["settings"]["storymodemethod"] == 1:
                 with Progress(console=console) as progress:
                     task = progress.add_task("", total=None)
@@ -105,34 +105,19 @@ class TTSEngine:
                         progress.console.print(f"#{idx + 1} Saving post text...")
                         progress.advance(task)
                         processed_comments += 1
-                        self.call_tts(f"postaudio-{idx}", process_text(text), add_silence=True)
+                        self.call_tts(f"postaudio-{idx}", process_text(text), add_silence=True, voice=voice)
 
         else:
-            breakpoint()
             submission_obj = self.reddit_object["submission_obj"]
             selftext = submission_obj.selftext
             if selftext:
-                if len(selftext) > self.tts_module.max_chars:  # Split the selftext if it is too long
-                    self.split_post(selftext, "postaudio")  # Split the selftext
-                else:  # If the selftext is not too long, just call the tts engine
-                    self.call_tts(f"postaudio", process_text(selftext), add_silence=True)
-                    
+                self.call_tts(f"postaudio", process_text(selftext), add_silence=True, voice=voice)
+
                 # merge with title audio
                 title_file = f"{self.path}/title.mp3"
                 selftext_file = f"{self.path}/postaudio.mp3"
-                output_file = f"{self.path}/postaudio_s.mp3"
-                try:
-                    cmd = ffmpeg.concat(ffmpeg.input(title_file), ffmpeg.input(selftext_file), v=0, a=1).output(output_file, **{"b:a": "192k"}).overwrite_output()
-                    cmd.run(
-                        quiet=True,
-                        overwrite_output=True,
-                        capture_stdout=False,
-                        capture_stderr=False,
-                    )
-                except ffmpeg.Error as e:
-                    print(e.stderr.decode("utf8"))
-                    exit(1)
-                Path(output_file).replace(Path(title_file))  # overwrite title file with file with title + selftext
+                output_file = title_file
+                self.merge_audio_files([title_file, selftext_file], output_file)
             
             with Progress(console=console) as progress:
                 task = progress.add_task("", total=None)
@@ -153,15 +138,24 @@ class TTSEngine:
                     progress.advance(task)
                     processed_comments += 1
                 
-                    if len(comment["comment_body"]) > self.tts_module.max_chars:  # Split the comment if it is too long
-                        self.split_post(comment["comment_body"], idx)  # Split the comment
-                    else:  # If the comment is not too long, just call the tts engine
-                        self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True)
+                    voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
+                    self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True, voice=voice)
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, processed_comments
 
-    def split_post(self, text: str, idx):
+    def split_text(self, text: str):
+        splitted_text = [
+            x.group().strip()
+            for x in re.finditer(
+                r" *(((.|\n){0," + str(self.tts_module.max_chars) + "})(\.|.$))", text
+            )
+        ]
+        
+        return splitted_text
+
+    def split_post(self, text: str, filename):
+        print(f"SPLIT_POST: self.random_voice: {self.random_voice}")
         split_files = []
         split_text = [
             x.group().strip()
@@ -169,23 +163,22 @@ class TTSEngine:
                 r" *(((.|\n){0," + str(self.tts_module.max_chars) + "})(\.|.$))", text
             )
         ]
-        self.create_silence_mp3()
 
         idy = None
         for idy, text_cut in enumerate(split_text):
             newtext = process_text(text_cut)
-            # print(f"{idx}-{idy}: {newtext}\n")
+            # print(f"{filename}-{idy}: {newtext}\n")
 
             if not newtext or newtext.isspace():
                 print("newtext was blank because sanitized split text resulted in none")
                 continue
             else:
                 is_last_entry = idy == len(split_text) - 1
-                self.call_tts(f"{idx}-{idy}.part", newtext, add_silence=is_last_entry)
+                self.call_tts(f"{filename}-{idy}.part", newtext, add_silence=is_last_entry, voice=False)
                 with open(f"{self.path}/list.txt", "w") as f:
                     for idz in range(0, len(split_text)):
-                        f.write("file " + f"'{idx}-{idz}.part.mp3'" + "\n")
-                    split_files.append(str(f"{self.path}/{idx}-{idy}.part.mp3"))
+                        f.write("file " + f"'{filename}-{idz}.part.mp3'" + "\n")
+                    split_files.append(str(f"{self.path}/{filename}-{idy}.part.mp3"))
                     f.write("file " + f"'silence.mp3'" + "\n")
 
                 os.system(
@@ -193,7 +186,7 @@ class TTSEngine:
                     + "-i "
                     + f"{self.path}/list.txt "
                     + "-c copy "
-                    + f"{self.path}/{idx}.mp3"
+                    + f"{self.path}/{filename}.mp3"
                 )
         try:
             for i in range(0, len(split_files)):
@@ -203,29 +196,84 @@ class TTSEngine:
         except OSError:
             print("OSError")
 
-    def call_tts(self, filename: str, text: str, add_silence=False):
-        print_substep(f"  [bold white][TTS][reset] {text}")
-        self.tts_module.run(
-            text,
-            filepath=f"{self.path}/{filename}.mp3",
-            random_voice=settings.config["settings"]["tts"]["random_voice"],
-        )
-        if add_silence:
-            tts_file = f"{self.path}/{filename}.mp3"
-            silence_file = f"{self.path}/silence.mp3"
-            output_file = f"{self.path}/{filename}_s.mp3"
-            try:
-                cmd = ffmpeg.concat(ffmpeg.input(tts_file), ffmpeg.input(silence_file), v=0, a=1).output(output_file, **{"b:a": "192k"}).overwrite_output()
-                cmd.run(
-                    quiet=True,
-                    overwrite_output=True,
-                    capture_stdout=False,
-                    capture_stderr=False,
+    def delete_files(self, files):
+        try:
+            for f in files:
+                os.unlink(f)
+        except FileNotFoundError as e:
+            print("File not found: " + e.filename)
+        except OSError:
+            print("OSError")
+
+    def merge_audio_files(self, audio_files, output_file, b="192k"):
+        needs_temp_file = output_file in audio_files
+        if needs_temp_file:
+            file_to_replace = audio_files[audio_files.index(output_file)]
+            stem = Path(output_file).stem
+            output_file = Path(output_file).with_stem(stem + '_temp').as_posix()
+        try:
+            inputs = map(ffmpeg.input, audio_files)
+            cmd = ffmpeg.concat(*inputs, v=0, a=1).output(output_file, **{"b:a": b}).overwrite_output()
+            cmd.run(
+                quiet=True,
+                overwrite_output=True,
+                capture_stdout=False,
+                capture_stderr=False,
+            )
+        except ffmpeg.Error as e:
+            print(e.stderr.decode("utf8"))
+            exit(1)
+        # overwrite original output_file if needed
+        if needs_temp_file:
+            Path(output_file).replace(Path(file_to_replace))
+
+    def call_tts(self, filename: str, text: str, voice=None, add_silence=False):
+        texts = [text]
+        if len(text) > self.tts_module.max_chars:  # Split the text if it is too long
+            texts = self.split_text(text)
+        
+        output_file = f"{self.path}/{filename}.mp3"
+        
+        num_parts = len(texts)
+        parts = []
+        if num_parts == 1:
+            print_substep(f"  [bold white]\[TTS][reset] {text}")
+            filepath = output_file
+            parts.append(filepath)
+            self.tts_module.run(
+                text,
+                filepath=filepath,
+                voice=voice,
+            )
+        else:
+            for part, text in enumerate(texts):
+
+                if not text or text.isspace():
+                    print("text was blank because sanitized split text resulted in none")
+                    continue
+                
+                print_substep(f"  [bold white]\[splitted TTS][reset] {text}")
+                suffix = f"_part{part}"
+                filepath = f"{self.path}/{filename}{suffix}.mp3"
+                parts.append(filepath)
+                self.tts_module.run(
+                    text,
+                    filepath=filepath,
+                    voice=voice,
                 )
-            except ffmpeg.Error as e:
-                print(e.stderr.decode("utf8"))
-                exit(1)
-            Path(output_file).replace(Path(tts_file))  # overwrite tts file with audio with silence
+            
+            self.merge_audio_files(parts, output_file=output_file)
+            if len(parts) > 1:
+                print(f"delete {parts}")
+                # self.delete_files(parts)
+                pass
+            
+
+        if add_silence:
+            tts_file = output_file
+            silence_file = f"{self.path}/silence.mp3"
+            self.merge_audio_files([tts_file, silence_file], output_file=output_file)
+
         # try:
         #     self.length += MP3(f"{self.path}/{filename}.mp3").info.length
         # except (MutagenError, HeaderNotFoundError):

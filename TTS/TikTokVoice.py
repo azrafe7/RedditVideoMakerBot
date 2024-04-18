@@ -86,23 +86,24 @@ class TikTokVoice:
         # merge and patch VOICES
         self.all_voices = list(set(disney_voices + eng_voices + non_eng_voices + vocals) | set(tiktokvoice.VOICES))
         # print(f"{self.all_voices}")
-        self.voice = settings.config["settings"]["tts"]["tiktok_voice"]
+        self.default_voice = settings.config["settings"]["tts"]["tiktok_voice"]
         tiktokvoice.VOICES = self.all_voices
 
-    def run(self, text: str, filepath: str, random_voice: bool = False):
-        voice = self.voice
-        if random_voice:
-            voice = self.random_voice()
+    def run(self, text: str, filepath: str, voice = None):
+        if voice is None:
+            voice = self.get_default_voice()
 
         tiktokvoice.tts(text=text, voice=voice, output_filename=filepath)
 
-    def random_voice(self) -> str:
+    def get_random_voice(self) -> str:
         lang = settings.config["reddit"]["thread"]["post_lang"]
         if not lang:
             return random.choice(eng_voices)
         else:
             return self.voice
 
+    def get_default_voice(self):
+        return self.default_voice
 
 class TikTokVoiceException(Exception):
     def __init__(self, code: int, message: str):
