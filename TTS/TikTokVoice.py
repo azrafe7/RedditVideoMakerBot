@@ -81,7 +81,8 @@ class TikTokVoice:
     """TikTokVoice Text-to-Speech Wrapper"""
 
     def __init__(self):
-        self.max_chars = 300
+        lang = settings.config["reddit"]["thread"]["post_lang"]
+        self.max_chars = 300 if not lang else 200
         
         # merge and patch VOICES
         self.all_voices = list(set(disney_voices + eng_voices + non_eng_voices + vocals) | set(tiktokvoice.VOICES))
