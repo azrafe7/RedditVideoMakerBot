@@ -275,10 +275,9 @@ def make_final_video(
             current_time += audio_clips_durations[i]
 
     title = re.sub(r"[^\w\s-]", "", reddit_obj["thread_title"])
-    idx = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])
     title_thumb = reddit_obj["thread_title"]
 
-    filename = f"{name_normalize(title)[:251]}"
+    filename = f"{name_normalize(reddit_id + ' - ' + title)[:251]}"
     subreddit = settings.config["reddit"]["thread"]["subreddit"]
 
     if not exists(f"./results/{subreddit}"):
@@ -410,7 +409,7 @@ def make_final_video(
         old_percentage = pbar.n
         pbar.update(100 - old_percentage)
     pbar.close()
-    save_data(subreddit, filename + ".mp4", title, idx, background_config["video"][2])
+    save_data(subreddit, filename + ".mp4", title, reddit_id, background_config["video"][2])
     print_step("Removing temporary files 🗑")
     cleanups = cleanup(reddit_id)
     print_substep(f"Removed {cleanups} temporary files 🗑")
