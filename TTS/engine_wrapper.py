@@ -90,10 +90,10 @@ class TTSEngine:
 
         self.use_random_voice = settings.config["settings"]["tts"]["random_voice"]
         
-        self.add_periods()
+        # self.add_periods()
         print_substep(f"Saving title...")
         voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
-        self.call_tts("title", process_text(self.reddit_object["thread_title"]), add_silence=True, voice=voice)
+        self.call_tts("title", process_text(self.reddit_object["tts_title"]), add_silence=True, voice=voice)
 
         processed_comments = 0
         
@@ -111,7 +111,7 @@ class TTSEngine:
 
         else:
             submission_obj = self.reddit_object["submission_obj"]
-            selftext = submission_obj.selftext
+            selftext = self.reddit_object["tts_selftext"]
             if selftext:
                 self.call_tts(f"postaudio", process_text(selftext), add_silence=True, voice=voice)
 
@@ -141,7 +141,7 @@ class TTSEngine:
                     processed_comments += 1
                 
                     voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
-                    self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True, voice=voice)
+                    self.call_tts(f"{idx}", process_text(comment["tts_text"]), add_silence=True, voice=voice)
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, processed_comments
@@ -159,7 +159,7 @@ class TTSEngine:
     def split_text2(self, text: str):
         splitted_text = []
         threshold = self.tts_module.max_chars
-        for chunk in re.split('\. |\n', text):
+        for chunk in re.split('\. |\n|!|\?', text):
             if splitted_text and len(chunk) + len(splitted_text[-1]) < threshold:
                 splitted_text[-1] += ' ' + chunk + '.'
             else:

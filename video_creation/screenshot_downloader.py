@@ -309,21 +309,29 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             ).click()  # Interest popup is showing, this code will close it
 
         submission_obj = reddit_object["submission_obj"]
+        reddit_object["tts_title"] = reddit_object["thread_title"]
+        
+        # selftext
+        reddit_object["tts_selftext"] = None
+        if submission_obj.selftext_html:
+            reddit_object["tts_selftext"] = striptags(submission_obj.selftext_html)
+        
         if lang:
             # translate code
             print_substep("Translating post...")
             
             # title
-            texts_in_tl = translators.translate_text(
+            title_tl = translators.translate_text(
                 reddit_object["thread_title"],
                 to_language=lang,
                 translator=settings.config["settings"]["translator"],
             )
             page.evaluate(
                 "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
-                texts_in_tl,
+                title_tl,
             )
-            print_substep(f"[Translated to '{lang}'] {get_excerpt(texts_in_tl)}")
+            print_substep(f"[Translated to '{lang}'] {get_excerpt(title_tl)}")
+            reddit_object["tts_title"] = title_tl
             
             # selftext
             if submission_obj.selftext_html:
@@ -335,7 +343,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
                     selftext_html_tl,
                 )
-
+                reddit_object["tts_selftext"] = striptags(selftext_html_tl)
         else:
             print_substep("Skipping translation...")
 
@@ -435,6 +443,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
                 comment_obj = comment["obj"]
 
+                comment["tts_text"] = comment["comment_body"]
                 skip_if_already_downloaded = False
                 if skip_if_already_downloaded and comment_path.exists():
                     print(f"Comment Screenshot already downloaded : {comment_path}")
@@ -463,6 +472,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             # comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
                             comment_obj.body_html = body_html_tl
                             comment_obj.body = striptags(body_html_tl)
+                            comment["tts_text"] = comment_obj.body
                             if screenshot_debug:
                                 comment_excerpt = get_comment_excerpt(comment_obj)
                                 print_substep(f"[Translated to '{lang}'] {comment_excerpt}")
@@ -527,6 +537,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                                 to_language=lang,
                                 translator=settings.config["settings"]["translator"],
                             )
+                            comment["tts_text"] = comment_tl
                             print_substep(f"[Translated to '{lang}'] {get_excerpt(comment_tl)}")
                             page.evaluate(
                                 '([comment_tl, comment_selector]) => document.querySelector(`${comment_selector} p`).parentElement.innerHTML = `<p>${comment_tl}</p>`', 
@@ -583,3 +594,5 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         browser.close()
 
     print_substep("Screenshots downloaded Successfully.", style="bold green")
+    
+    return screenshot_num
