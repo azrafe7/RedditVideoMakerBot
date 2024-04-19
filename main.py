@@ -50,7 +50,6 @@ def main(POST_ID=None, from_cli=False) -> None:
     reddit_object = get_subreddit_threads(POST_ID, from_cli=from_cli)
     redditid = id(reddit_object)
     number_of_comments = get_screenshots_of_reddit_posts(reddit_object, 15)
-    breakpoint()
     length, number_of_comments = save_text_to_mp3(reddit_object)
     length = math.ceil(length)
     print_substep(f"Comments: {number_of_comments}   Length: {length} seconds")
