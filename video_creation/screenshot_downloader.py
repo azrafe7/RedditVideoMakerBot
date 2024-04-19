@@ -135,6 +135,12 @@ def hide_header(page):
     if header_loc.count() > 0:
         header_loc.evaluate('node => node.style.display="none"')
 
+def hide_archived_banner(page):
+    # Hide post-archived-banner
+    archived_loc = page.locator('div[slot^="post-archived"]')
+    if archived_loc.count() > 0:
+        archived_loc.evaluate('node => node.style.display="none"')
+
 def get_excerpt(text, max_length=80):
   excerpt = text.split("\n")[0]
   if len(excerpt) > max_length: excerpt = excerpt[:max_length] + "…"
@@ -289,7 +295,10 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
         # Hide header
         hide_header(page)
-
+        
+        # Hide post-archived-banner
+        hide_archived_banner(page)
+        
         if page.locator(
             "#t3_12hmbug > div > div._3xX726aBn29LDbsDtzr_6E._1Ap4F5maDtT1E1YuCiaO0r.D3IL3FD0RFy_mkKLPwL4 > div > div > button"
         ).is_visible():
@@ -479,11 +488,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                             # if idx == 0: breakpoint()
 
                         # Fill template fields and update page
+                        default_avatar = "https://www.redditstatic.com/shreddit/assets/snoovatar-back-64x64px.png"
                         values = {
                             'author': comment_obj.author.name if comment_obj.author else '[unknown]',
                             'id': comment_obj.id,
                             'score': number_to_abbreviated_string(comment_obj.score, style=template_abbreviated_style),
-                            'avatar': comment_obj.author.icon_img if comment_obj.author else '[unknown]',
+                            'avatar': comment_obj.author.icon_img if (comment_obj.author and hasattr(comment_obj.author, 'icon_img')) else default_avatar,
                             'date': datetime_to_human_timedelta(dt.datetime.fromtimestamp(comment_obj.created), style=template_abbreviated_style),
                             'body_text': comment_obj.body,
                             'body_html': comment_obj.body_html,
