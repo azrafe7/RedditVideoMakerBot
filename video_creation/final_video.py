@@ -26,6 +26,8 @@ console = Console()
 
 NUM_CPUS = multiprocessing.cpu_count()  # multiprocessing.cpu_count() 
 
+FFMPEG_QUIET = True
+
 class ProgressFfmpeg(threading.Thread):
     def __init__(self, vid_duration_seconds, progress_update_callback):
         threading.Thread.__init__(self, name="ProgressFfmpeg")
@@ -106,7 +108,7 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
     )
     try:
         print_ffmpeg_cmd(output)
-        output.run(quiet=True)
+        output.run(quiet=FFMPEG_QUIET)
     except ffmpeg.Error as e:
         print(e.stderr.decode("utf8"))
         exit(1)
@@ -200,7 +202,7 @@ def make_final_video(
         audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k"}
     ).overwrite_output()
     print_ffmpeg_cmd(cmd)
-    cmd.run(quiet=True)
+    cmd.run(quiet=FFMPEG_QUIET)
 
     console.log(f"[bold green] Video Will Be: {length} Seconds Long")
 
@@ -365,7 +367,7 @@ def make_final_video(
             ).overwrite_output().global_args("-progress", progress.output_file.name)
             print_ffmpeg_cmd(cmd)
             cmd.run(
-                quiet=True,
+                quiet=FFMPEG_QUIET,
                 overwrite_output=True,
                 capture_stdout=False,
                 capture_stderr=False,
@@ -397,7 +399,7 @@ def make_final_video(
                 ).overwrite_output().global_args("-progress", progress.output_file.name)
                 print_ffmpeg_cmd(cmd)
                 cmd.run(
-                    quiet=True,
+                    quiet=FFMPEG_QUIET,
                     overwrite_output=True,
                     capture_stdout=False,
                     capture_stderr=False,
