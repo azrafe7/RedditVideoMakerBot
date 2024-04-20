@@ -28,7 +28,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 15  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 6  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -91,7 +91,7 @@ class TTSEngine:
 
         self.use_random_voice = settings.config["settings"]["tts"]["random_voice"]
         
-        # self.add_periods()
+        self.add_periods()
         print_substep(f"Saving title...")
         voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
         self.call_tts("title", process_text(self.reddit_object["tts_title"]), add_silence=True, voice=voice)
@@ -142,7 +142,8 @@ class TTSEngine:
                     processed_comments += 1
                 
                     voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
-                    self.call_tts(f"{idx}", process_text(comment["tts_text"]), add_silence=True, voice=voice)
+                    # self.call_tts(f"{idx}", process_text(comment["tts_text"]), add_silence=True, voice=voice)
+                    self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True, voice=voice)
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, processed_comments
@@ -294,7 +295,7 @@ class TTSEngine:
         # except (MutagenError, HeaderNotFoundError):
         #     self.length += sox.file_info.duration(f"{self.path}/{filename}.mp3")
         try:
-            clip = AudioFileClip(f"{self.path}/{filename}.mp3")
+            clip = AudioFileClip(output_file)
             self.last_clip_length = clip.duration
             self.length += clip.duration
             clip.close()
