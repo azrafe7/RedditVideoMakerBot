@@ -105,7 +105,7 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
             **{
                 "c:v": "h264",
                 "b:v": "20M",
-                "b:a": "192k",
+                # "b:a": "192k",
                 "threads": NUM_CPUS,
             },
         )
