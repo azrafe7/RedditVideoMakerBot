@@ -91,16 +91,21 @@ def print_ffmpeg_cmd(cmd):
 
 def prepare_background(reddit_id: str, W: int, H: int) -> str:
     output_path = f"assets/temp/{reddit_id}/background_noaudio.mp4"
+    # if Path(output_path).exists():
+        # print_substep('background_noaudio.mp4 already exists \[SKIPPING]')
+        # return output_path
     output = (
         ffmpeg.input(f"assets/temp/{reddit_id}/background.mp4")
         .filter("crop", f"ih*({W}/{H})", "ih")
+        .filter('setpts', 'PTS-STARTPTS')
+        
         .output(
             output_path,
             an=None,
             **{
                 "c:v": "h264",
-                # "b:v": "20M",
-                # "b:a": "192k",
+                "b:v": "20M",
+                "b:a": "192k",
                 "threads": NUM_CPUS,
             },
         )
@@ -129,7 +134,7 @@ def merge_background_audio(audio: ffmpeg, reddit_id: str):
         bg_audio = ffmpeg.input(f"assets/temp/{reddit_id}/background.mp3").filter(
             "volume",
             background_audio_volume,
-        )
+        ).filter('asetpts', 'PTS-STARTPTS')
         # Merges audio and background_audio
         merged_audio = ffmpeg.filter([audio, bg_audio], "amix", duration="longest")
         return merged_audio  # Return merged audio
@@ -189,17 +194,13 @@ def make_final_video(
         ]
         audio_clips.insert(0, ffmpeg.input(f"assets/temp/{reddit_id}/mp3/title.mp3"))
 
-        audio_clips_durations = [
-            float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/{i}.mp3")["format"]["duration"])
-            for i in range(number_of_clips)
-        ]
-        audio_clips_durations.insert(
-            0,
-            float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")["format"]["duration"]),
-        )
+        audio_infos = [ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/{i}.mp3") for i in range(number_of_clips)]
+        audio_clips_durations = [float(audio_infos[i]["format"]["duration"]) for i in range(number_of_clips)]
+        audio_info = ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")
+        audio_clips_durations.insert(0, float(audio_info["format"]["duration"]))
     audio_concat = ffmpeg.concat(*audio_clips, a=1, v=0)
     cmd = ffmpeg.output(
-        audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k"}
+        audio_concat, f"assets/temp/{reddit_id}/audio.mp3", **{"b:a": "192k", }
     ).overwrite_output()
     print_ffmpeg_cmd(cmd)
     cmd.run(quiet=FFMPEG_QUIET)
@@ -208,7 +209,7 @@ def make_final_video(
 
     screenshot_width = int((W * 60) // 100)
     print_substep(f"screenshot_width: {screenshot_width}")
-    audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3")
+    audio = ffmpeg.input(f"assets/temp/{reddit_id}/audio.mp3").filter('asetpts', 'PTS-STARTPTS')
     final_audio = merge_background_audio(audio, reddit_id)
 
     image_clips = list()
@@ -222,16 +223,10 @@ def make_final_video(
 
     current_time = 0
     if settings.config["settings"]["storymode"]:
-        audio_clips_durations = [
-            float(
-                ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/postaudio-{i}.mp3")["format"]["duration"]
-            )
-            for i in range(number_of_clips)
-        ]
-        audio_clips_durations.insert(
-            0,
-            float(ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")["format"]["duration"]),
-        )
+        audio_infos = [ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/postaudio-{i}.mp3") for i in range(number_of_clips)]
+        audio_clips_durations = [float(audio_infos[i]["format"]["duration"]) for i in range(number_of_clips)]
+        audio_info = ffmpeg.probe(f"assets/temp/{reddit_id}/mp3/title.mp3")
+        audio_clips_durations.insert(0, float(audio_info["format"]["duration"]))
         if settings.config["settings"]["storymodemethod"] == 0:
             image_clips.insert(
                 1,
@@ -360,9 +355,10 @@ def make_final_video(
                 f="mp4",
                 **{
                     "c:v": "h264",
-                    # "b:v": "20M",
+                    "b:v": "20M",
                     "b:a": "192k",
                     "threads": NUM_CPUS,
+                    "vsync": "vfr",
                 },
             ).overwrite_output().global_args("-progress", progress.output_file.name)
             print_ffmpeg_cmd(cmd)
