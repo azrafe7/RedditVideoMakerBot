@@ -13,6 +13,7 @@ import ffmpeg
 from pathlib import Path
 from video_creation.final_video import print_ffmpeg_cmd
 from cleantext import clean as cleantext
+from utils.unmark import unmark
 
 from utils import settings
 from utils.console import print_step, print_substep, console
@@ -27,7 +28,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 2  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 15  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -315,7 +316,10 @@ def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
     
     def clean_text(text):
-        return cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, no_emoji=True)
+        text = unmark(text)  # remove markdown
+        text = re.sub("\.+", ".", text)  # replace multiple dots with one
+        text = cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, no_emoji=True)  # clean
+        return text
     
     # new_text = sanitize_text(text) if clean else text
     new_text = clean_text(text) if clean else text
