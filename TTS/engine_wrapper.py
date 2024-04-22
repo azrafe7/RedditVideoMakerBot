@@ -12,7 +12,7 @@ from rich.markup import escape
 import ffmpeg
 from pathlib import Path
 from video_creation.final_video import print_ffmpeg_cmd
-from cleantext import clean as cleantext
+import cleantext
 from utils.unmark import unmark
 
 from utils import settings
