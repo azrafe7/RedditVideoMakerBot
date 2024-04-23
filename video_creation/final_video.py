@@ -27,6 +27,7 @@ console = Console()
 NUM_CPUS = multiprocessing.cpu_count()  # multiprocessing.cpu_count() 
 
 FFMPEG_QUIET = True
+VIDEO_ENCODER = 'libx265' # h264
 
 class ProgressFfmpeg(threading.Thread):
     def __init__(self, vid_duration_seconds, progress_update_callback):
@@ -103,7 +104,7 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
             output_path,
             an=None,
             **{
-                "c:v": "h264",
+                "c:v": VIDEO_ENCODER,
                 # "b:v": "20M",
                 # "b:a": "192k",
                 "threads": NUM_CPUS,
@@ -354,7 +355,7 @@ def make_final_video(
                 path,
                 f="mp4",
                 **{
-                    "c:v": "h264",
+                    # "c:v": VIDEO_ENCODER,
                     # "b:v": "20M",
                     "b:a": "192k",
                     "threads": NUM_CPUS,
@@ -387,7 +388,7 @@ def make_final_video(
                     path,
                     f="mp4",
                     **{
-                        "c:v": "h264",
+                        "c:v": VIDEO_ENCODER,
                         # "b:v": "20M",
                         "b:a": "192k",
                         "threads": NUM_CPUS,
