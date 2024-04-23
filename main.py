@@ -56,8 +56,11 @@ def main(POST_ID=None, from_cli=False) -> None:
     }
     download_background_video(bg_config["video"])
     download_background_audio(bg_config["audio"])
-    number_of_screenshots = 15 if engine_wrapper.MAX_COMMENTS is None else engine_wrapper.MAX_COMMENTS  # set it to a suitable number > engine_wrapper .DEFAULT_MAX_LENGTH || .MAX_COMMENTS
-    number_of_comments = get_screenshots_of_reddit_posts(reddit_object, number_of_screenshots)  # also updates reddit_object
+    number_of_screenshots = 20 if engine_wrapper.MAX_COMMENTS is None else engine_wrapper.MAX_COMMENTS  # set it to a suitable number > engine_wrapper .DEFAULT_MAX_LENGTH || .MAX_COMMENTS
+    number_of_comments, reddit_object = get_screenshots_of_reddit_posts(reddit_object, number_of_screenshots)  # also updates reddit_object
+    breakpoint()
+    number_of_comments, reddit_object = get_screenshots_of_reddit_posts(reddit_object, number_of_screenshots, use_metadata_file=True)  # also updates reddit_object
+    breakpoint()
     length, number_of_comments = save_text_to_mp3(reddit_object)
     length = math.ceil(length)
     print_substep(f"Comments: {number_of_comments}   Length: {length} seconds")

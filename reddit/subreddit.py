@@ -11,6 +11,34 @@ from utils.videos import check_done
 from utils.voice import sanitize_text
 
 
+def serializable_submission(submission):
+    fields = ["title", "selftext", "selftext_html", "num_comments", "score", "upvote_ratio", "permalink", "id", "over_18"]
+    res = {}
+    for field in fields:
+        res[field] = getattr(submission, field)
+
+    res["author"] = {}
+    if submission.author:
+        res["author"]["name"] = submission.author.name
+        if hasattr(submission.author, 'icon_img'):
+            res["author"]["icon_img"] = submission.author.icon_img
+
+    return res
+
+def serializable_comment(comment):
+    fields = ["body", "body_html", "id", "created", "permalink", "score"]
+    res = {}
+    for field in fields:
+        res[field] = getattr(comment, field)
+
+    res["author"] = {}
+    if comment.author:
+        res["author"]["name"] = comment.author.name
+        if hasattr(comment.author, 'icon_img'):
+            res["author"]["icon_img"] = comment.author.icon_img
+
+    return res
+    
 def get_subreddit_threads(POST_ID: str, from_cli=False):
     """
     Returns a list of threads from the AskReddit subreddit.
@@ -18,7 +46,7 @@ def get_subreddit_threads(POST_ID: str, from_cli=False):
 
     print_substep("[PRAW] Logging into Reddit.")
 
-    content = {}
+    content = {"tts_title": "", "tts_selftext": ""}
     if settings.config["reddit"]["creds"]["2fa"]:
         print("\nEnter your two-factor authentication code from your authenticator app.\n")
         code = input("> ")
@@ -116,7 +144,7 @@ def get_subreddit_threads(POST_ID: str, from_cli=False):
             style="bold blue",
         )
 
-    content["submission_obj"] = submission
+    content["submission_obj"] = serializable_submission(submission)
     content["thread_url"] = threadurl
     content["thread_title"] = submission.title
     content["thread_id"] = submission.id
@@ -151,10 +179,11 @@ def get_subreddit_threads(POST_ID: str, from_cli=False):
                         ):  # if errors occur with this change to if not.
                             content["comments"].append(
                                 {
+                                    "tts_text": "",
                                     "comment_body": top_level_comment.body,
                                     "comment_url": top_level_comment.permalink,
                                     "comment_id": top_level_comment.id,
-                                    "obj": top_level_comment,
+                                    "comment_obj": serializable_comment(top_level_comment),
                                 }
                             )
 

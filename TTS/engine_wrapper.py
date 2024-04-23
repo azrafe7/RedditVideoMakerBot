@@ -28,7 +28,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 15  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 2  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.
@@ -142,8 +142,8 @@ class TTSEngine:
                     processed_comments += 1
                 
                     voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
-                    # self.call_tts(f"{idx}", process_text(comment["tts_text"]), add_silence=True, voice=voice)
-                    self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True, voice=voice)
+                    self.call_tts(f"{idx}", process_text(comment["tts_text"]), add_silence=True, voice=voice)
+                    # self.call_tts(f"{idx}", process_text(comment["comment_body"]), add_silence=True, voice=voice)
 
         print_substep("Saved Text to MP3 files successfully.", style="bold green")
         return self.length, processed_comments
@@ -324,12 +324,12 @@ def process_text(text: str, clean: bool = True):
     
     # new_text = sanitize_text(text) if clean else text
     new_text = clean_text(text) if clean else text
-    if lang:
-        # print(f"new_text: {new_text}")
-        translated_text = translators.translate_text(new_text, translator=settings.config["settings"]["translator"], to_language=lang)
-        # print(f"translated_text: {translated_text}")
-        # new_text = sanitize_text(translated_text) if clean else translated_text
-        new_text = clean_text(translated_text) if clean else translated_text
-        # new_text = translated_text
+    #if lang:
+    #    # print(f"new_text: {new_text}")
+    #    translated_text = translators.translate_text(new_text, translator=settings.config["settings"]["translator"], to_language=lang)
+    #    # print(f"translated_text: {translated_text}")
+    #    # new_text = sanitize_text(translated_text) if clean else translated_text
+    #    new_text = clean_text(translated_text) if clean else translated_text
+    #    # new_text = translated_text
     # print(f"processed_text: {new_text}")
     return new_text

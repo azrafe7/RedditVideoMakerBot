@@ -23,6 +23,8 @@ from jinja2.filters import do_striptags as striptags
 __all__ = ["download_screenshots_of_reddit_posts"]
 
 
+METADATA_FILE = "metadata.json"
+
 def fill_template(template, values):
     filled_template = template # a copy of template
     for k, v in values.items():
@@ -148,9 +150,9 @@ def get_excerpt(text, max_length=80):
   return excerpt
 
 def get_comment_excerpt(comment):
-    return get_excerpt(comment.body)
+    return get_excerpt(comment["body"])
 
-def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
+def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, use_metadata_file=False):
     """Downloads screenshots of reddit posts as seen on the web. Downloads to assets/temp/png
 
     Args:
@@ -169,6 +171,14 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
     assets_temp_folder = Path(f"assets/temp/")
     screenshots_temp_folder = assets_temp_folder / Path(f"{reddit_id}/png")
     screenshots_temp_folder.mkdir(parents=True, exist_ok=True)
+
+    metadata_file_path = screenshots_temp_folder / Path(METADATA_FILE)
+    metadata = None
+    if use_metadata_file:
+        print_substep(f'Loading metadata from "{metadata_file_path.as_posix()}"...', style="bold blue")
+        with open(metadata_file_path, encoding="utf-8") as f:
+            metadata = json.load(f)
+            reddit_object = metadata
 
     # set the theme and disable non-essential cookies
     if settings.config["settings"]["theme"] == "dark":
@@ -318,12 +328,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             ).click()  # Interest popup is showing, this code will close it
 
         submission_obj = reddit_object["submission_obj"]
-        reddit_object["tts_title"] = reddit_object["thread_title"]
+        reddit_object["tts_title"] = submission_obj["title"]
         
         # selftext
         reddit_object["tts_selftext"] = None
-        if submission_obj.selftext_html:
-            reddit_object["tts_selftext"] = striptags(submission_obj.selftext_html)
+        if submission_obj["selftext_html"]:
+            reddit_object["tts_selftext"] = striptags(submission_obj["selftext_html"])
         
         if lang:
             # translate code
@@ -343,9 +353,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             reddit_object["tts_title"] = title_tl
             
             # selftext
-            if submission_obj.selftext_html:
+            if submission_obj["selftext_html"]:
                 html_fmt = "<translation>{}</translation>"
-                html = html_fmt.format(submission_obj.selftext_html)
+                html = html_fmt.format(submission_obj["selftext_html"])
                 html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
                 selftext_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
                 page.evaluate(
@@ -354,7 +364,26 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 )
                 reddit_object["tts_selftext"] = striptags(selftext_html_tl)
         else:
-            print_substep("Skipping translation...")
+            if not use_metadata_file:
+                print_substep("Skipping translation...")
+            else:
+                # TODO: replace with templated title
+                print_substep("Replacing title content with metadata...")
+                # title
+                title_tl = submission_obj["title"]
+                page.evaluate(
+                    "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
+                    title_tl,
+                )
+                print_substep(f'TITLE: {title_tl}')
+                # selftext
+                if submission_obj["selftext_html"]:
+                    selftext_html_tl = submission_obj["selftext_html"]
+                    page.evaluate(
+                        "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
+                        selftext_html_tl,
+                    )
+                    print_substep(f'SELFTEXT: {selftext_html_tl}')
 
         postcontentpath = f"assets/temp/{reddit_id}/png/title.png"
         try:
@@ -450,7 +479,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
                 comment_path: Path = screenshots_temp_folder / Path(f"comment_{idx}.png")
 
-                comment_obj = comment["obj"]
+                comment_obj = comment["comment_obj"]
 
                 comment["tts_text"] = comment["comment_body"]
                 skip_if_already_downloaded = False
@@ -459,29 +488,30 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 else:
                     if screenshot_debug:
                         comment_excerpt = get_comment_excerpt(comment_obj)
-                        print_substep(f"[{idx + 1}/{len(accepted_comments)} {comment_obj.id}] {comment_obj.author}: {comment_excerpt}")
+                        author = comment_obj["author"]["name"] if comment_obj["author"] else '[unknown]'
+                        print_substep(f'[{idx + 1}/{len(accepted_comments)} {comment_obj["id"]}] {author}: {comment_excerpt}')
 
                     if use_template:
                         # replace preview links with images
                         preview_regex = re.compile('<a href=("https://preview[^>]+)>(.*?)</a>')
-                        if preview_regex.search(comment_obj.body_html):
+                        if preview_regex.search(comment_obj["body_html"]):
                             # breakpoint()
                             pass
-                        comment_obj.body_html = preview_regex.sub(r'<img src=\1 style="max-width:180px">', comment_obj.body_html)
+                        comment_obj["body_html"] = preview_regex.sub(r'<img src=\1 style="max-width:180px">', comment_obj["body_html"])
                         
                         # translate code
                         if lang:
                             # breakpoint()
                             # html_fmt = "<!DOCTYPE html><html><head><title></title><body><translation>{}</translation></body></html>"
                             html_fmt = "<translation>{}</translation>"
-                            html = html_fmt.format(comment_obj.body_html)
+                            html = html_fmt.format(comment_obj["body_html"])
                             html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
                             body_html_tl = re.search('<translation>(.*?)</translation>', html_tl).group(1)
                             # update comment_obj with translation
-                            # comment_obj.body_html = f'<div class="md"><p>{comment_tl}</p></div>'
-                            comment_obj.body_html = body_html_tl
-                            comment_obj.body = striptags(body_html_tl)
-                            comment["tts_text"] = comment_obj.body
+                            # comment_obj["body_html"] = f'<div class="md"><p>{comment_tl}</p></div>'
+                            comment_obj["body_html"] = body_html_tl
+                            comment_obj["body"] = striptags(body_html_tl)
+                            comment["tts_text"] = comment_obj["body"]
                             if screenshot_debug:
                                 comment_excerpt = get_comment_excerpt(comment_obj)
                                 print_substep(f"[Translated to '{lang}'] {comment_excerpt}")
@@ -490,14 +520,14 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         # Fill template fields and update page
                         default_avatar = "https://www.redditstatic.com/shreddit/assets/snoovatar-back-64x64px.png"
                         values = {
-                            'author': comment_obj.author.name if comment_obj.author else '[unknown]',
-                            'id': comment_obj.id,
-                            'score': number_to_abbreviated_string(comment_obj.score, style=template_abbreviated_style),
-                            'avatar': comment_obj.author.icon_img if (comment_obj.author and hasattr(comment_obj.author, 'icon_img')) else default_avatar,
-                            'date': datetime_to_human_timedelta(dt.datetime.fromtimestamp(comment_obj.created), style=template_abbreviated_style),
-                            'body_text': comment_obj.body,
-                            'body_html': comment_obj.body_html,
-                            'permalink': comment_obj.permalink,
+                            'author': comment_obj["author"]["name"] if comment_obj["author"] else '[unknown]',
+                            'id': comment_obj["id"],
+                            'score': number_to_abbreviated_string(comment_obj["score"], style=template_abbreviated_style),
+                            'avatar': comment_obj["author"]["icon_img"] if (comment_obj["author"] and hasattr(comment_obj["author"], 'icon_img')) else default_avatar,
+                            'date': datetime_to_human_timedelta(dt.datetime.fromtimestamp(comment_obj["created"]), style=template_abbreviated_style),
+                            'body_text': comment_obj["body"],
+                            'body_html': comment_obj["body_html"],
+                            'permalink': comment_obj["permalink"],
                         }
                         # Render the template with variables
                         output = template.render(values)
@@ -603,6 +633,11 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         # close browser instance when we are done using it
         browser.close()
 
+    if not use_metadata_file:
+        print_substep(f'Writing metadata to "{metadata_file_path.as_posix()}"...', style="bold blue")
+        with open(metadata_file_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(reddit_object, indent=2))
+
     print_substep("Screenshots downloaded Successfully.", style="bold green")
     
-    return screenshot_num
+    return screenshot_num, reddit_object
