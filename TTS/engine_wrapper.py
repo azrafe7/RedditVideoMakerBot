@@ -28,7 +28,7 @@ DEFAULT_MAX_LENGTH: int = (
     70  # Max video length (in seconds), edit this on your own risk. It should work, but it's not supported
 )
 
-MAX_COMMENTS = 2  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
+MAX_COMMENTS = 15  # max number of comments to process, or set it to None to use DEFAULT_MAX_LENGTH
 
 class TTSEngine:
     """Calls the given TTS engine to reduce code duplication and allow multiple TTS engines.

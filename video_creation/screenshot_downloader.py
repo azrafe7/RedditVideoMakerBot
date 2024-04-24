@@ -117,8 +117,7 @@ def set_preferred_theme(theme, page):
                     return true;
                 }
             """, arg=preferred_theme)
-            # breakpoint()
-    breakpoint()
+    
     html_loc = page.locator('html')
     if html_loc.count() == 1:
         html_loc.evaluate("""(node, preferred_theme) => {
