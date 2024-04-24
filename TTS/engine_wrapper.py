@@ -319,7 +319,7 @@ def process_text(text: str, clean: bool = True):
     def clean_text(text):
         text = unmark(text)  # remove markdown
         text = re.sub("\.+", ".", text)  # replace multiple dots with one
-        text = cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, no_emoji=True)  # clean
+        text = cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, to_ascii=False, no_emoji=True)  # clean
         return text
     
     # new_text = sanitize_text(text) if clean else text
