@@ -104,7 +104,7 @@ def prepare_background(reddit_id: str, W: int, H: int) -> str:
             output_path,
             an=None,
             **{
-                "c:v": VIDEO_ENCODER,
+                # "c:v": VIDEO_ENCODER,
                 # "b:v": "20M",
                 # "b:a": "192k",
                 "threads": NUM_CPUS,
