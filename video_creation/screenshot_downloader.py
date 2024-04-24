@@ -25,6 +25,7 @@ __all__ = ["download_screenshots_of_reddit_posts"]
 
 METADATA_FILE = "metadata.json"
 
+
 def fill_template(template, values):
     filled_template = template # a copy of template
     for k, v in values.items():
@@ -101,11 +102,11 @@ def number_to_abbreviated_string(number, style):
 def set_preferred_theme(theme, page):
     # Alternate method to try to set preferred theme
     preferred_theme = 'dark' if theme == 'dark' else 'light'
+    print("Try to set theme to " + (preferred_theme) + "...")
     dark_mode_switcher_loc = page.locator('faceplate-switch-input[value="darkmode-switch-value"]').first
     if dark_mode_switcher_loc.count() == 1:
         is_dark_mode_enabled = page.locator('html.theme-dark').first.count() > 0
         if (preferred_theme == "dark" and not is_dark_mode_enabled) or (preferred_theme == "light" and is_dark_mode_enabled):
-            print("Try to set theme to " + (preferred_theme) + "...")
             dark_mode_switcher_loc.dispatch_event('click')
             # Ensure to set preferred theme
             page.wait_for_function("""
@@ -117,6 +118,16 @@ def set_preferred_theme(theme, page):
                 }
             """, arg=preferred_theme)
             # breakpoint()
+    breakpoint()
+    html_loc = page.locator('html')
+    if html_loc.count() == 1:
+        html_loc.evaluate("""(node, preferred_theme) => {
+            node.classList.remove('theme-light', 'theme-dark');
+            node.classList.add('theme-' + preferred_theme);
+            return node.classList;
+        }""",
+        arg=preferred_theme
+    )
 
 def bypass_see_this_post_in(page):
     # Bypass "See this post in..."
@@ -152,7 +163,7 @@ def get_excerpt(text, max_length=80):
 def get_comment_excerpt(comment):
     return get_excerpt(comment["body"])
 
-def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, use_metadata_file=False):
+def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, use_metadata_file=False, bypass_login=True):
     """Downloads screenshots of reddit posts as seen on the web. Downloads to assets/temp/png
 
     Args:
@@ -246,46 +257,49 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, us
 
         screenshot_debug = settings.config["settings"]["screenshot_debug"]
 
-        # Login to Reddit
-        print_substep("[BROWSER] Logging into Reddit...")
-
-        # Use old.reddit.com to login only (go to reddit.com for actual posts/comments later)
-        page.goto("https://old.reddit.com/login", timeout=0)
-        # page.set_viewport_size(ViewportSize(width=1920, height=1080))
-        page.set_viewport_size(ViewportSize(width=1200, height=720))
-        login_url = page.url
-
-        username_loc = page.locator("#login-form #user_login").first
-        password_loc = page.locator("#login-form #passwd_login").first
-        button_loc = page.locator("#login-form button[type='submit']").first
-
-        print("Logging in via old.reddit.com/login...")
-        username_loc.fill(settings.config["reddit"]["creds"]["username"])
-        password_loc.fill(settings.config["reddit"]["creds"]["password"])
-        button_loc.first.click()
-
-        # Check for login error message
-        login_error_loc = page.locator("#login-form .c-form-control-feedback-error").first
-        if login_error_loc.is_visible():
-            print_substep(
-                "Login unsuccessful: probably your reddit credentials are incorrect! Please modify them accordingly in the config.toml file.",
-                style="red",
-            )
-            exit()
-
-        # Wait for navigation to page different from the login one
-        not_login_url_regex = re.compile('^(?!' + login_url + ')')
-        page.wait_for_url(not_login_url_regex, wait_until="commit") # wait_until='commit' -> wait until another url started loading
-
-        current_url = page.url
-        if current_url == "https://old.reddit.com/":
-            print("Login successful!")
+        if bypass_login:
+            print_substep(f'Bypassing Login...')
         else:
-            print_substep(
-                "Login unsuccessful: probably your reddit credentials are incorrect! Please modify them accordingly in the config.toml file.",
-                style="red",
-            )
-            exit()
+            # Login to Reddit
+            print_substep("[BROWSER] Logging into Reddit...")
+
+            # Use old.reddit.com to login only (go to reddit.com for actual posts/comments later)
+            page.goto("https://old.reddit.com/login", timeout=0)
+            # page.set_viewport_size(ViewportSize(width=1920, height=1080))
+            page.set_viewport_size(ViewportSize(width=1200, height=720))
+            login_url = page.url
+
+            username_loc = page.locator("#login-form #user_login").first
+            password_loc = page.locator("#login-form #passwd_login").first
+            button_loc = page.locator("#login-form button[type='submit']").first
+
+            print("Logging in via old.reddit.com/login...")
+            username_loc.fill(settings.config["reddit"]["creds"]["username"])
+            password_loc.fill(settings.config["reddit"]["creds"]["password"])
+            button_loc.first.click()
+
+            # Check for login error message
+            login_error_loc = page.locator("#login-form .c-form-control-feedback-error").first
+            if login_error_loc.is_visible():
+                print_substep(
+                    "Login unsuccessful: probably your reddit credentials are incorrect! Please modify them accordingly in the config.toml file.",
+                    style="red",
+                )
+                exit()
+
+            # Wait for navigation to page different from the login one
+            not_login_url_regex = re.compile('^(?!' + login_url + ')')
+            page.wait_for_url(not_login_url_regex, wait_until="commit") # wait_until='commit' -> wait until another url started loading
+
+            current_url = page.url
+            if current_url == "https://old.reddit.com/":
+                print("Login successful!")
+            else:
+                print_substep(
+                    "Login unsuccessful: probably your reddit credentials are incorrect! Please modify them accordingly in the config.toml file.",
+                    style="red",
+                )
+                exit()
 
         # Goto thread url
         thread_url = reddit_object["thread_url"]
