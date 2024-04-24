@@ -165,7 +165,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, us
     lang: Final[str] = settings.config["reddit"]["thread"]["post_lang"]
     storymode: Final[bool] = settings.config["settings"]["storymode"]
 
-    print_step("Downloading screenshots of reddit posts...")
+    print_step(f"Downloading screenshots of reddit posts [use_metadata_file={use_metadata_file}]...")
     reddit_id = re.sub(r"[^\w\s-]", "", reddit_object["thread_id"])
     # ! Make sure the reddit screenshots folder exists
     assets_temp_folder = Path(f"assets/temp/")
@@ -337,7 +337,7 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, us
             if submission_obj["selftext_html"]:
                 reddit_object["tts_selftext"] = striptags(submission_obj["selftext_html"])
             
-            if lang and not use_metadata_file:
+            if lang:
                 # translate code
                 print_substep("Translating post...")
                 
@@ -352,41 +352,41 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, us
                     title_tl,
                 )
                 print_substep(f"[Translated to '{lang}'] {get_excerpt(title_tl)}")
-                reddit_object["tts_title"] = title_tl
+                reddit_object["tts_title"] = reddit_object["submission_obj"]["title"] = title_tl
                 
                 # selftext
                 if submission_obj["selftext_html"]:
                     html_fmt = "<translation>{}</translation>"
                     html = html_fmt.format(submission_obj["selftext_html"])
                     html_tl = translate_wrapper.translate_html(html, to_language=lang, translator=settings.config["settings"]["translator"])
-                    breakpoint()
                     selftext_html_tl = re.search('<translation>([\w\W]*)</translation>', html_tl).group(1)
                     page.evaluate(
                         "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
                         selftext_html_tl,
                     )
+                    reddit_object["submission_obj"]["selftext_html"] = selftext_html_tl
                     reddit_object["tts_selftext"] = striptags(selftext_html_tl)
+        else:
+            if not lang and not use_metadata_file:
+                print_substep("Skipping translation...")
             else:
-                if not use_metadata_file:
-                    print_substep("Skipping translation...")
-                else:
-                    # TODO: replace with templated title
-                    print_substep("Replacing title content with metadata...")
-                    # title
-                    title_tl = submission_obj["title"]
+                # TODO: replace with templated title
+                print_substep("Replacing title content with metadata...")
+                # title
+                title_tl = submission_obj["title"]
+                page.evaluate(
+                    "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
+                    title_tl,
+                )
+                print_substep(f'TITLE: {title_tl}')
+                # selftext
+                if submission_obj["selftext_html"]:
+                    selftext_html_tl = submission_obj["selftext_html"]
                     page.evaluate(
-                        "tl_content => document.querySelector('h1[id^=\"post-title\"]').textContent = tl_content",
-                        title_tl,
+                        "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
+                        selftext_html_tl,
                     )
-                    print_substep(f'TITLE: {title_tl}')
-                    # selftext
-                    if submission_obj["selftext_html"]:
-                        selftext_html_tl = submission_obj["selftext_html"]
-                        page.evaluate(
-                            "tl_content => document.querySelector('shreddit-post .md').outerHTML = tl_content",
-                            selftext_html_tl,
-                        )
-                        print_substep(f'SELFTEXT: {selftext_html_tl}')
+                    print_substep(f'SELFTEXT: {selftext_html_tl}')
 
         postcontentpath = f"assets/temp/{reddit_id}/png/title.png"
         try:
@@ -644,4 +644,4 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int, us
 
     print_substep("Screenshots downloaded Successfully.", style="bold green")
     
-    return screenshot_num, reddit_object
+    return screenshot_num, reddit_object, metadata_file_path.as_posix()
