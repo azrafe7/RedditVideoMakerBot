@@ -24,7 +24,7 @@ from video_creation.background import (
 )
 from TTS import engine_wrapper
 from video_creation.final_video import make_final_video
-from video_creation.screenshot_downloader import get_screenshots_of_reddit_posts
+from video_creation.screenshot_downloader import get_screenshots_of_reddit_posts, METADATA_FILE
 from video_creation.voices import save_text_to_mp3
 
 __VERSION__ = "3.2.2"
@@ -58,6 +58,7 @@ def main(POST_ID=None, from_cli=False) -> None:
     download_background_audio(bg_config["audio"])
     number_of_screenshots = 20 if engine_wrapper.MAX_COMMENTS is None else engine_wrapper.MAX_COMMENTS  # set it to a suitable number > engine_wrapper .DEFAULT_MAX_LENGTH || .MAX_COMMENTS
     # number_of_comments, reddit_object, metadata_file = get_screenshots_of_reddit_posts(reddit_object, number_of_screenshots)  # also updates reddit_object
+    metadata_file = Path(f"assets/temp/") / Path(redditid) / Path('png') / Path(METADATA_FILE)
     print_substep(f'Update "{metadata_file}" now or \[c]ontinue...', style="bold blue")
     breakpoint()
     number_of_comments, reddit_object, metadata_file = get_screenshots_of_reddit_posts(reddit_object, number_of_screenshots, use_metadata_file=True)  # also updates reddit_object
