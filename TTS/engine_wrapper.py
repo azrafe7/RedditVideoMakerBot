@@ -61,21 +61,22 @@ class TTSEngine:
         self.last_clip_length = last_clip_length
 
     def add_periods(
-        self,
+        self, text
     ):  # adds periods to the end of paragraphs (where people often forget to put them) so tts doesn't blend sentences
-        for comment in self.reddit_object["comments"]:
-            # remove links
-            regex_urls = r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
-            comment["comment_body"] = re.sub(regex_urls, " ", comment["comment_body"])
-            comment["comment_body"] = comment["comment_body"].replace("\n", ". ")
-            comment["comment_body"] = re.sub(r"\bAI\b", "A.I", comment["comment_body"])
-            comment["comment_body"] = re.sub(r"\bAGI\b", "A.G.I", comment["comment_body"])
-            if comment["comment_body"][-1] != ".":
-                comment["comment_body"] += "."
-            comment["comment_body"] = comment["comment_body"].replace(". . .", ".")
-            comment["comment_body"] = comment["comment_body"].replace(".. .", ".")
-            comment["comment_body"] = comment["comment_body"].replace(". .", ".")
-            comment["comment_body"] = re.sub(r'\."\.', '".', comment["comment_body"])
+        # remove links
+        regex_urls = r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
+        text = re.sub(regex_urls, " ", text)
+        text = text.replace("\n", ". ")
+        text = re.sub(r"\bAI\b", "A.I", text)
+        text = re.sub(r"\bAGI\b", "A.G.I", text)
+        if text[-1] != ".":
+            text += "."
+        text = text.replace(". . .", ".")
+        text = text.replace(".. .", ".")
+        text = text.replace(". .", ".")
+        text = re.sub(r'\."\.', '".', text)
+
+        return text
 
     def run(self) -> Tuple[int, int]:
         Path(self.path).mkdir(parents=True, exist_ok=True)
@@ -90,6 +91,9 @@ class TTSEngine:
         self.create_silence_mp3()
 
         self.use_random_voice = settings.config["settings"]["tts"]["random_voice"]
+        
+        for comment in self.reddit_object["comments"]: 
+            comment = self.add_periods(comment)
         
         self.add_periods()
         print_substep(f"Saving title...")
@@ -320,6 +324,7 @@ def process_text(text: str, clean: bool = True):
         text = unmark(text)  # remove markdown
         text = re.sub("\.+", ".", text)  # replace multiple dots with one
         text = cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, to_ascii=False, no_emoji=True)  # clean
+        text = self.add_periods(text)
         return text
     
     # new_text = sanitize_text(text) if clean else text
