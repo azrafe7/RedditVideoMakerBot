@@ -60,24 +60,6 @@ class TTSEngine:
         self.length = 0
         self.last_clip_length = last_clip_length
 
-    def add_periods(
-        self, text
-    ):  # adds periods to the end of paragraphs (where people often forget to put them) so tts doesn't blend sentences
-        # remove links
-        regex_urls = r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
-        text = re.sub(regex_urls, " ", text)
-        text = text.replace("\n", ". ")
-        text = re.sub(r"\bAI\b", "A.I", text)
-        text = re.sub(r"\bAGI\b", "A.G.I", text)
-        if text[-1] != ".":
-            text += "."
-        text = text.replace(". . .", ".")
-        text = text.replace(".. .", ".")
-        text = text.replace(". .", ".")
-        text = re.sub(r'\."\.', '".', text)
-
-        return text
-
     def run(self) -> Tuple[int, int]:
         Path(self.path).mkdir(parents=True, exist_ok=True)
         lang = settings.config["reddit"]["thread"]["post_lang"]
@@ -93,9 +75,8 @@ class TTSEngine:
         self.use_random_voice = settings.config["settings"]["tts"]["random_voice"]
         
         for comment in self.reddit_object["comments"]: 
-            comment = self.add_periods(comment)
+            comment["comment_body"] = add_periods(comment["comment_body"])
         
-        self.add_periods()
         print_substep(f"Saving title...")
         voice = self.tts_module.get_random_voice() if self.use_random_voice else self.get_default_voice()
         self.call_tts("title", process_text(self.reddit_object["tts_title"]), add_silence=True, voice=voice)
@@ -317,6 +298,22 @@ class TTSEngine:
         silence.write_audiofile(f"{self.path}/silence.mp3", fps=44100, verbose=False, logger=None)
 
 
+def add_periods(text):  # adds periods to the end of paragraphs (where people often forget to put them) so tts doesn't blend sentences
+    # remove links
+    regex_urls = r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
+    text = re.sub(regex_urls, " ", text)
+    text = text.replace("\n", ". ")
+    text = re.sub(r"\bAI\b", "A.I", text)
+    text = re.sub(r"\bAGI\b", "A.G.I", text)
+    if text[-1] != ".":
+        text += "."
+    text = text.replace(". . .", ".")
+    text = text.replace(".. .", ".")
+    text = text.replace(". .", ".")
+    text = re.sub(r'\."\.', '".', text)
+
+    return text
+
 def process_text(text: str, clean: bool = True):
     lang = settings.config["reddit"]["thread"]["post_lang"]
     
@@ -324,7 +321,7 @@ def process_text(text: str, clean: bool = True):
         text = unmark(text)  # remove markdown
         text = re.sub("\.+", ".", text)  # replace multiple dots with one
         text = cleantext.clean(text, no_urls=True, replace_with_url="", lower=False, to_ascii=False, no_emoji=True)  # clean
-        text = self.add_periods(text)
+        text = add_periods(text)
         return text
     
     # new_text = sanitize_text(text) if clean else text
@@ -337,4 +334,5 @@ def process_text(text: str, clean: bool = True):
     #    new_text = clean_text(translated_text) if clean else translated_text
     #    # new_text = translated_text
     # print(f"processed_text: {new_text}")
+    
     return new_text
